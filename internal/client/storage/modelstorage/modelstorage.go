@@ -1,4 +1,4 @@
-package modelstroage
+package modelstorage
 
 type (
 	LoginAndPassword struct {

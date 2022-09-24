@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"context"
+	"dk-go-gophkeeper/internal/client/storage"
 	"dk-go-gophkeeper/internal/client/tui/modeltui"
 	"fmt"
 	"github.com/rivo/tview"
@@ -20,7 +22,7 @@ var pages = tview.NewPages()
 
 var header = tview.NewTextView().SetText(fmt.Sprintf("GophKeeper: build %s, date %s, commit %s", buildVersion, buildDate, buildCommit)).SetTextAlign(1)
 var footer = tview.NewTextView().SetText(fmt.Sprint("Kirill Danilov, 2022, https://github.com/danilovkiri/")).SetTextAlign(1)
-var statusHeader = tview.NewTextView().SetText(fmt.Sprint("Operation status:")).SetTextAlign(1)
+var statusHeader = tview.NewTextView().SetText(fmt.Sprint("Last operation status:")).SetTextAlign(1)
 var buttonSync = tview.NewButton("Sync")
 var buttonQuit = tview.NewButton("Quit")
 var buttonRegisterLogin = tview.NewButton("Register/Login")
@@ -28,12 +30,12 @@ var menu = tview.NewFlex().
 	AddItem(buttonSync, 0, 1, false).
 	AddItem(buttonQuit, 0, 1, false).
 	AddItem(buttonRegisterLogin, 0, 1, false)
-var buttonStoreLoginPassword = tview.NewButton("login/password")
-var buttonStoreTextBinary = tview.NewButton("text/binary")
-var buttonStoreBankCard = tview.NewButton("bank card")
-var buttonGetAllData = tview.NewButton("get all data")
-var buttonRemove = tview.NewButton("remove")
-var buttonBackToMainScreen = tview.NewButton("back to menu")
+var buttonStoreLoginPassword = tview.NewButton("Add login/password")
+var buttonStoreTextBinary = tview.NewButton("Add text/binary")
+var buttonStoreBankCard = tview.NewButton("Add bank card")
+var buttonGetAllData = tview.NewButton("Show all")
+var buttonRemove = tview.NewButton("Remove item")
+var buttonBackToMainScreen = tview.NewButton("Back to menu")
 var input = tview.NewFlex().SetDirection(tview.FlexRow).
 	AddItem(buttonStoreLoginPassword, 0, 1, false).
 	AddItem(buttonStoreTextBinary, 0, 1, false).
@@ -44,6 +46,8 @@ var body = tview.NewFlex().AddItem(input, 0, 1, false)
 
 type App struct {
 	App                    *tview.Application
+	storage                storage.DataStorage
+	ctx                    context.Context
 	registerLoginDetails   modeltui.RegisterLogin
 	registerLoginForm      *tview.Form
 	bankCards              []modeltui.BankCard
@@ -52,7 +56,6 @@ type App struct {
 	storeTextOrBinaryForm  *tview.Form
 	loginsAndPasswords     []modeltui.LoginAndPassword
 	storeLoginPasswordForm *tview.Form
-	removals               []modeltui.Removal
 	removeForm             *tview.Form
 	loginStatus            *tview.TextView
 	operationStatus        *tview.TextView
@@ -64,8 +67,13 @@ func (a *App) addRemovalForm() *tview.Form {
 	a.removeForm.AddInputField("Identifier", "", 20, nil, func(id string) {
 		removal.Identifier = id
 	})
-	a.removeForm.AddButton("Save", func() {
-		a.removals = append(a.removals, removal)
+	a.removeForm.AddButton("Execute", func() {
+		status, err := a.storage.Remove(removal.Identifier)
+		if err != nil {
+			a.operationStatus.SetText(err.Error())
+		} else {
+			a.operationStatus.SetText(status)
+		}
 		pages.SwitchToPage("menu")
 	})
 	a.removeForm.AddButton("Exit", func() {
@@ -89,7 +97,12 @@ func (a *App) addLoginPasswordForm() *tview.Form {
 		loginAndPassword.Meta = meta
 	})
 	a.storeLoginPasswordForm.AddButton("Save", func() {
-		a.loginsAndPasswords = append(a.loginsAndPasswords, loginAndPassword)
+		err := a.storage.AddLoginPassword(loginAndPassword.Identifier, loginAndPassword.Login, loginAndPassword.Password, loginAndPassword.Meta)
+		if err != nil {
+			a.operationStatus.SetText(err.Error())
+		} else {
+			a.operationStatus.SetText("Adding login.password: OK")
+		}
 		pages.SwitchToPage("menu")
 	})
 	a.storeLoginPasswordForm.AddButton("Exit", func() {
@@ -110,7 +123,12 @@ func (a *App) addTextOrBinaryForm() *tview.Form {
 		textOrBinary.Meta = meta
 	})
 	a.storeTextOrBinaryForm.AddButton("Save", func() {
-		a.textsOrBinaries = append(a.textsOrBinaries, textOrBinary)
+		err := a.storage.AddTextBinary(textOrBinary.Identifier, textOrBinary.Entry, textOrBinary.Meta)
+		if err != nil {
+			a.operationStatus.SetText(err.Error())
+		} else {
+			a.operationStatus.SetText("Adding text/binary: OK")
+		}
 		pages.SwitchToPage("menu")
 	})
 	a.storeTextOrBinaryForm.AddButton("Exit", func() {
@@ -137,7 +155,12 @@ func (a *App) addBankCardForm() *tview.Form {
 		bankCard.Meta = meta
 	})
 	a.storeBankCardForm.AddButton("Save", func() {
-		a.bankCards = append(a.bankCards, bankCard)
+		err := a.storage.AddBankCard(bankCard.Identifier, bankCard.Number, bankCard.Holder, bankCard.Cvv, bankCard.Meta)
+		if err != nil {
+			a.operationStatus.SetText(err.Error())
+		} else {
+			a.operationStatus.SetText("Adding bank card: OK")
+		}
 		pages.SwitchToPage("menu")
 	})
 	a.storeBankCardForm.AddButton("Exit", func() {
@@ -166,14 +189,12 @@ func (a *App) Sync() error {
 	return nil
 }
 
-func (a *App) GetAllData() error {
-	return nil
-}
-
-func InitTUI() App {
+func InitTUI(ctx context.Context, storage storage.DataStorage, logger *log.Logger) App {
 	var app = tview.NewApplication()
 	application := App{
 		App:                    app,
+		storage:                storage,
+		ctx:                    ctx,
 		registerLoginDetails:   modeltui.RegisterLogin{},
 		registerLoginForm:      tview.NewForm(),
 		bankCards:              make([]modeltui.BankCard, 0),
@@ -182,7 +203,6 @@ func InitTUI() App {
 		storeTextOrBinaryForm:  tview.NewForm(),
 		loginsAndPasswords:     make([]modeltui.LoginAndPassword, 0),
 		storeLoginPasswordForm: tview.NewForm(),
-		removals:               make([]modeltui.Removal, 0),
 		removeForm:             tview.NewForm(),
 		loginStatus:            tview.NewTextView().SetText("Logged in: NA").SetTextAlign(1).SetScrollable(true),
 		operationStatus:        tview.NewTextView().SetText("Nothing to report yet").SetTextAlign(1).SetScrollable(true),
@@ -225,17 +245,13 @@ func (a *App) Run() {
 		if err != nil {
 			a.operationStatus.SetText(err.Error())
 		} else {
-			a.operationStatus.SetText("OK")
+			a.operationStatus.SetText("Syncing OK")
 		}
 	})
 	buttonGetAllData.SetSelectedFunc(func() {
-		err := a.GetAllData()
+		data := a.storage.ShowAllData()
 		pages.SwitchToPage("result")
-		if err != nil {
-			a.result.SetText(err.Error())
-		} else {
-			a.result.SetText("OK")
-		}
+		a.result.SetText(data)
 	})
 	buttonBackToMainScreen.SetSelectedFunc(func() {
 		pages.SwitchToPage("menu")
