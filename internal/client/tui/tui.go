@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"dk-go-gophkeeper/internal/client/grpcclient"
 	"dk-go-gophkeeper/internal/client/storage"
 	"dk-go-gophkeeper/internal/client/tui/modeltui"
 	"fmt"
@@ -60,6 +61,8 @@ type App struct {
 	loginStatus            *tview.TextView
 	operationStatus        *tview.TextView
 	result                 *tview.TextView
+	logger                 *log.Logger
+	clientGRPC             grpcclient.GRPCClient
 }
 
 func (a *App) addRemovalForm() *tview.Form {
@@ -176,7 +179,14 @@ func (a *App) addRegisterLoginForm() *tview.Form {
 	a.registerLoginForm.AddInputField("Password", "", 20, nil, func(password string) {
 		a.registerLoginDetails.Password = password
 	})
-	a.registerLoginForm.AddButton("OK", func() {
+	a.registerLoginForm.AddButton("Submit", func() {
+		err := a.storage.LoginRegister(a.registerLoginDetails.Login, a.registerLoginDetails.Password)
+		if err != nil {
+			a.operationStatus.SetText(err.Error())
+		} else {
+			a.operationStatus.SetText("Login/Register: OK")
+			a.loginStatus.SetText(fmt.Sprintf("Logged in as: %s", a.registerLoginDetails.Login))
+		}
 		pages.SwitchToPage("menu")
 	})
 	a.registerLoginForm.AddButton("Exit", func() {
@@ -204,10 +214,12 @@ func InitTUI(ctx context.Context, storage storage.DataStorage, logger *log.Logge
 		loginsAndPasswords:     make([]modeltui.LoginAndPassword, 0),
 		storeLoginPasswordForm: tview.NewForm(),
 		removeForm:             tview.NewForm(),
-		loginStatus:            tview.NewTextView().SetText("Logged in: NA").SetTextAlign(1).SetScrollable(true),
+		loginStatus:            tview.NewTextView().SetText("Logged in as: NA").SetTextAlign(1).SetScrollable(true),
 		operationStatus:        tview.NewTextView().SetText("Nothing to report yet").SetTextAlign(1).SetScrollable(true),
 		result:                 tview.NewTextView().SetText("Nothing was requested yet").SetTextAlign(1).SetScrollable(true),
+		logger:                 logger,
 	}
+	application.logger.Print("TUI initiated")
 	return application
 }
 

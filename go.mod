@@ -5,6 +5,7 @@ go 1.19
 require (
 	github.com/rivo/tview v0.0.0-20220916081518-2e69b7385a37
 	golang.org/x/sync v0.0.0-20220923202941-7f9b1623fab7
+	google.golang.org/grpc v1.49.0
 )
 
 require (

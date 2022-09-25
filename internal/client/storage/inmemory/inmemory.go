@@ -22,7 +22,7 @@ type Storage struct {
 	logger          *log.Logger
 }
 
-func InitStorage(logger *log.Logger) *Storage {
+func InitStorage(logger *log.Logger, client grpcclient.GRPCClient) *Storage {
 	bankCardDB := make(map[string]modelstorage.BankCard)
 	loginPasswordDB := make(map[string]modelstorage.LoginAndPassword)
 	textBinaryDB := make(map[string]modelstorage.TextOrBinary)
@@ -31,7 +31,9 @@ func InitStorage(logger *log.Logger) *Storage {
 		loginPasswordDB: loginPasswordDB,
 		textBinaryDB:    textBinaryDB,
 		logger:          logger,
+		clientGRPC:      client,
 	}
+	st.logger.Print("Storage initiated")
 	return &st
 }
 
@@ -39,27 +41,55 @@ func (s *Storage) Remove(identifier string) (string, error) {
 	status := ""
 	_, ok := s.bankCardDB[identifier]
 	if ok {
-		s.logger.Print("Removed entry from bank card storage:", identifier)
-		status += fmt.Sprintf("removed entry %s from bank card storage\n", identifier)
+		s.logger.Print("Removing entry from bank card storage:", identifier)
+		_, err := s.clientGRPC.Remove(identifier, "bankCard")
+		if err != nil {
+			s.logger.Print("Could not remove bank card entry:", err.Error())
+			return status, err
+		}
 		delete(s.bankCardDB, identifier)
+		status += fmt.Sprintf("removed entry %s from bank card storage\n", identifier)
 	}
 	_, ok = s.loginPasswordDB[identifier]
 	if ok {
-		s.logger.Print("Removed entry from login/password storage:", identifier)
-		status += fmt.Sprintf("removed entry %s from login/password storage\n", identifier)
+		s.logger.Print("Removing entry from login/password storage:", identifier)
+		_, err := s.clientGRPC.Remove(identifier, "loginPassword")
+		if err != nil {
+			s.logger.Print("Could not remove login/password entry:", err.Error())
+			return status, err
+		}
 		delete(s.loginPasswordDB, identifier)
+		status += fmt.Sprintf("removed entry %s from login/password storage\n", identifier)
 	}
 	_, ok = s.textBinaryDB[identifier]
 	if ok {
-		s.logger.Print("Removed entry from text/binary storage:", identifier)
-		status += fmt.Sprintf("removed entry %s from text/binary storage\n", identifier)
+		s.logger.Print("Removing entry from text/binary storage:", identifier)
+		_, err := s.clientGRPC.Remove(identifier, "textBinary")
+		if err != nil {
+			s.logger.Print("Could not remove text/binary entry:", err.Error())
+			return status, err
+		}
 		delete(s.textBinaryDB, identifier)
+		status += fmt.Sprintf("removed entry %s from text/binary storage\n", identifier)
 	}
 	if status == "" {
 		s.logger.Print("Not found in storage:", identifier)
 		return status, fmt.Errorf("identifier %s was not found in storage", identifier)
 	}
 	return status, nil
+}
+
+func (s *Storage) LoginRegister(login, password string) error {
+	newLoginRegisterEntry := modelstorage.RegisterLogin{
+		Login:    login,
+		Password: password,
+	}
+	_, err := s.clientGRPC.LoginRegister(newLoginRegisterEntry)
+	if err != nil {
+		s.logger.Print("Could not perform login/register request:", err.Error())
+		return err
+	}
+	return nil
 }
 
 func (s *Storage) AddBankCard(identifier, number, holder, cvv, meta string) error {
@@ -77,11 +107,11 @@ func (s *Storage) AddBankCard(identifier, number, holder, cvv, meta string) erro
 	}
 	s.bankCardDB[identifier] = newBankCardEntry
 	s.logger.Print("Added to bank card storage:", newBankCardEntry)
-	//err := s.clientGRPC.SendBankCard(newBankCardEntry)
-	//if err != nil {
-	//	delete(s.bankCardDB, identifier)
-	//	s.logger.Print("Could not upload bank card entry:", err.Error())
-	//}
+	_, err := s.clientGRPC.SendBankCard(newBankCardEntry)
+	if err != nil {
+		delete(s.bankCardDB, identifier)
+		s.logger.Print("Could not upload bank card entry:", err.Error())
+	}
 	return nil
 }
 
@@ -99,11 +129,11 @@ func (s *Storage) AddLoginPassword(identifier, login, password, meta string) err
 	}
 	s.loginPasswordDB[identifier] = newLoginPasswordEntry
 	s.logger.Print("Added to login/password storage:", newLoginPasswordEntry)
-	//err := s.clientGRPC.SendLoginPassword(newLoginPasswordEntry)
-	//if err != nil {
-	//	delete(s.loginPasswordDB, identifier)
-	//	s.logger.Print("Could not upload login.password entry:", err.Error())
-	//}
+	_, err := s.clientGRPC.SendLoginPassword(newLoginPasswordEntry)
+	if err != nil {
+		delete(s.loginPasswordDB, identifier)
+		s.logger.Print("Could not upload login.password entry:", err.Error())
+	}
 	return nil
 }
 
@@ -120,11 +150,11 @@ func (s *Storage) AddTextBinary(identifier, entry, meta string) error {
 	}
 	s.textBinaryDB[identifier] = newTextBinaryEntry
 	s.logger.Print("Added to text/binary storage:", newTextBinaryEntry)
-	//err := s.clientGRPC.SendTextBinary(newTextBinaryEntry)
-	//if err != nil {
-	//	delete(s.textBinaryDB, identifier)
-	//	s.logger.Print("Could not upload text/binary entry:", err.Error())
-	//}
+	_, err := s.clientGRPC.SendTextBinary(newTextBinaryEntry)
+	if err != nil {
+		delete(s.textBinaryDB, identifier)
+		s.logger.Print("Could not upload text/binary entry:", err.Error())
+	}
 	return nil
 }
 
@@ -143,7 +173,7 @@ func (s *Storage) Sync(ctx context.Context) error {
 }
 
 func (s *Storage) dumpBankCards() error {
-	cloudDataBankCards, err := s.clientGRPC.GetBankCards()
+	cloudDataBankCards, _, err := s.clientGRPC.GetBankCards()
 	if err != nil {
 		return err
 	}
@@ -155,7 +185,7 @@ func (s *Storage) dumpBankCards() error {
 }
 
 func (s *Storage) dumpLoginsPasswords() error {
-	cloudDataLoginsPasswords, err := s.clientGRPC.GetLoginsPasswords()
+	cloudDataLoginsPasswords, _, err := s.clientGRPC.GetLoginsPasswords()
 	if err != nil {
 		return err
 	}
@@ -167,7 +197,7 @@ func (s *Storage) dumpLoginsPasswords() error {
 }
 
 func (s *Storage) dumpTextsBinaries() error {
-	cloudDataTextsBinaries, err := s.clientGRPC.GetTextsBinaries()
+	cloudDataTextsBinaries, _, err := s.clientGRPC.GetTextsBinaries()
 	if err != nil {
 		return err
 	}
@@ -190,4 +220,13 @@ func (s *Storage) ShowAllData() string {
 		data += fmt.Sprintf("%#v", value) + "\n"
 	}
 	return data
+}
+
+func (s *Storage) CleanDB() {
+	bankCardDB := make(map[string]modelstorage.BankCard)
+	loginPasswordDB := make(map[string]modelstorage.LoginAndPassword)
+	textBinaryDB := make(map[string]modelstorage.TextOrBinary)
+	s.bankCardDB = bankCardDB
+	s.loginPasswordDB = loginPasswordDB
+	s.textBinaryDB = textBinaryDB
 }

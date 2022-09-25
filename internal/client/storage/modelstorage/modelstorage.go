@@ -19,4 +19,8 @@ type (
 		Cvv        string
 		Meta       string
 	}
+	RegisterLogin struct {
+		Login    string
+		Password string
+	}
 )

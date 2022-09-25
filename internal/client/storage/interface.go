@@ -1,6 +1,8 @@
 package storage
 
-import "context"
+import (
+	"context"
+)
 
 // BankCardAdder defines a set of methods for types implementing BankCardAdder.
 type BankCardAdder interface {
@@ -32,6 +34,16 @@ type Remover interface {
 	Remove(string) (string, error)
 }
 
+// Cleaner defines a set of methods for types implementing Cleaner.
+type Cleaner interface {
+	CleanDB()
+}
+
+// Authorizer defines a set of methods for types implementing Authorizer.
+type Authorizer interface {
+	LoginRegister(login, password string) error
+}
+
 // DataStorage defines a set of embedded interfaces for types implementing DataStorage.
 type DataStorage interface {
 	BankCardAdder
@@ -40,4 +52,6 @@ type DataStorage interface {
 	Syncer
 	AllDataGetter
 	Remover
+	Cleaner
+	Authorizer
 }
