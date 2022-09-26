@@ -31,17 +31,17 @@ var menu = tview.NewFlex().
 	AddItem(buttonSync, 0, 1, false).
 	AddItem(buttonQuit, 0, 1, false).
 	AddItem(buttonRegisterLogin, 0, 1, false)
-var buttonStoreLoginPassword = tview.NewButton("Add login/password")
-var buttonStoreTextBinary = tview.NewButton("Add text/binary")
-var buttonStoreBankCard = tview.NewButton("Add bank card")
-var buttonGetAllData = tview.NewButton("Show all")
+var buttonStoreLoginPassword = tview.NewButton("Add loginPassword item")
+var buttonStoreTextBinary = tview.NewButton("Add textBinary item")
+var buttonStoreBankCard = tview.NewButton("Add bankCard item")
+var buttonGetData = tview.NewButton("Get item")
 var buttonRemove = tview.NewButton("Remove item")
 var buttonBackToMainScreen = tview.NewButton("Back to menu")
 var input = tview.NewFlex().SetDirection(tview.FlexRow).
 	AddItem(buttonStoreLoginPassword, 0, 1, false).
 	AddItem(buttonStoreTextBinary, 0, 1, false).
 	AddItem(buttonStoreBankCard, 0, 1, false).
-	AddItem(buttonGetAllData, 0, 1, false).
+	AddItem(buttonGetData, 0, 1, false).
 	AddItem(buttonRemove, 0, 1, false)
 var body = tview.NewFlex().AddItem(input, 0, 1, false)
 
@@ -58,6 +58,7 @@ type App struct {
 	loginsAndPasswords     []modeltui.LoginAndPassword
 	storeLoginPasswordForm *tview.Form
 	removeForm             *tview.Form
+	retrieveDataPieceForm  *tview.Form
 	loginStatus            *tview.TextView
 	operationStatus        *tview.TextView
 	result                 *tview.TextView
@@ -65,17 +66,45 @@ type App struct {
 	clientGRPC             grpcclient.GRPCClient
 }
 
+func (a *App) addRetrieveDataPieceForm() *tview.Form {
+	query := modeltui.Get{}
+	a.retrieveDataPieceForm.AddInputField("Identifier", "", 20, nil, func(id string) {
+		query.Identifier = id
+	})
+	a.retrieveDataPieceForm.AddDropDown("DB type", []string{"bankCard", "loginPassword", "textBinary"}, 0, func(db string, idx int) {
+		query.Db = db
+	})
+	a.retrieveDataPieceForm.AddButton("Get", func() {
+		result, err := a.storage.Get(query.Identifier, query.Db)
+		if err != nil {
+			a.operationStatus.SetText(err.Error())
+			pages.SwitchToPage("menu")
+		} else {
+			a.operationStatus.SetText("Getting data: OK")
+			a.result.SetText(result)
+			pages.SwitchToPage("result")
+		}
+	})
+	a.retrieveDataPieceForm.AddButton("Exit", func() {
+		pages.SwitchToPage("menu")
+	})
+	return a.retrieveDataPieceForm
+}
+
 func (a *App) addRemovalForm() *tview.Form {
 	removal := modeltui.Removal{}
 	a.removeForm.AddInputField("Identifier", "", 20, nil, func(id string) {
 		removal.Identifier = id
 	})
+	a.removeForm.AddDropDown("DB type", []string{"bankCard", "loginPassword", "textBinary"}, 0, func(db string, idx int) {
+		removal.Db = db
+	})
 	a.removeForm.AddButton("Execute", func() {
-		status, err := a.storage.Remove(removal.Identifier)
+		err := a.storage.Remove(removal.Identifier, removal.Db)
 		if err != nil {
 			a.operationStatus.SetText(err.Error())
 		} else {
-			a.operationStatus.SetText(status)
+			a.operationStatus.SetText("Removal: OK")
 		}
 		pages.SwitchToPage("menu")
 	})
@@ -104,7 +133,7 @@ func (a *App) addLoginPasswordForm() *tview.Form {
 		if err != nil {
 			a.operationStatus.SetText(err.Error())
 		} else {
-			a.operationStatus.SetText("Adding login.password: OK")
+			a.operationStatus.SetText("Adding login/password: OK")
 		}
 		pages.SwitchToPage("menu")
 	})
@@ -195,10 +224,6 @@ func (a *App) addRegisterLoginForm() *tview.Form {
 	return a.registerLoginForm
 }
 
-func (a *App) Sync() error {
-	return nil
-}
-
 func InitTUI(ctx context.Context, storage storage.DataStorage, logger *log.Logger) App {
 	var app = tview.NewApplication()
 	application := App{
@@ -214,6 +239,7 @@ func InitTUI(ctx context.Context, storage storage.DataStorage, logger *log.Logge
 		loginsAndPasswords:     make([]modeltui.LoginAndPassword, 0),
 		storeLoginPasswordForm: tview.NewForm(),
 		removeForm:             tview.NewForm(),
+		retrieveDataPieceForm:  tview.NewForm(),
 		loginStatus:            tview.NewTextView().SetText("Logged in as: NA").SetTextAlign(1).SetScrollable(true),
 		operationStatus:        tview.NewTextView().SetText("Nothing to report yet").SetTextAlign(1).SetScrollable(true),
 		result:                 tview.NewTextView().SetText("Nothing was requested yet").SetTextAlign(1).SetScrollable(true),
@@ -253,17 +279,17 @@ func (a *App) Run() {
 		a.App.Stop()
 	})
 	buttonSync.SetSelectedFunc(func() {
-		err := a.Sync()
+		err := a.storage.Sync()
 		if err != nil {
 			a.operationStatus.SetText(err.Error())
 		} else {
 			a.operationStatus.SetText("Syncing OK")
 		}
 	})
-	buttonGetAllData.SetSelectedFunc(func() {
-		data := a.storage.ShowAllData()
-		pages.SwitchToPage("result")
-		a.result.SetText(data)
+	buttonGetData.SetSelectedFunc(func() {
+		a.retrieveDataPieceForm.Clear(true)
+		a.addRetrieveDataPieceForm()
+		pages.SwitchToPage("get_data")
 	})
 	buttonBackToMainScreen.SetSelectedFunc(func() {
 		pages.SwitchToPage("menu")
@@ -287,6 +313,7 @@ func (a *App) Run() {
 	pages.AddPage("store_bank_card", a.storeBankCardForm, true, false)
 	pages.AddPage("register_login", a.registerLoginForm, true, false)
 	pages.AddPage("remove", a.removeForm, true, false)
+	pages.AddPage("get_data", a.retrieveDataPieceForm, true, false)
 	pages.AddPage("result", resultView, true, false)
 
 	if err := a.App.SetRoot(pages, true).EnableMouse(true).Run(); err != nil {

@@ -37,7 +37,9 @@ type TextBinarySender interface {
 
 // Remover defines a set of methods for types implementing Remover.
 type Remover interface {
-	Remove(string, string) (codes.Code, error)
+	RemoveBankCard(string) (codes.Code, error)
+	RemoveLoginPassword(string) (codes.Code, error)
+	RemoveTextBinary(string) (codes.Code, error)
 }
 
 // Authorizer defines a set of methods for types implementing Authorizer.

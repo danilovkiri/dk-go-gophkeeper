@@ -5,6 +5,7 @@ import (
 	"dk-go-gophkeeper/internal/client/grpcclient/client"
 	"dk-go-gophkeeper/internal/client/storage/inmemory"
 	"dk-go-gophkeeper/internal/client/tui"
+	"dk-go-gophkeeper/internal/config"
 	"log"
 	"os"
 	"os/signal"
@@ -21,7 +22,8 @@ func main() {
 	defer flog.Close()
 	logger := log.New(flog, `client `, log.LstdFlags|log.Lshortfile)
 	ctx, cancel := context.WithCancel(context.Background())
-	clientGRPC := client.InitGRPCClient(ctx, logger, wg)
+	cfg := config.NewDefaultConfiguration()
+	clientGRPC := client.InitGRPCClient(ctx, logger, wg, cfg)
 	storage := inmemory.InitStorage(logger, clientGRPC)
 	app := tui.InitTUI(ctx, storage, logger)
 	app.Run()
@@ -32,5 +34,5 @@ func main() {
 		cancel()
 		app.App.Stop()
 	}()
-
+	wg.Wait()
 }

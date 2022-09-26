@@ -23,6 +23,7 @@ type Storage struct {
 }
 
 func InitStorage(logger *log.Logger, client grpcclient.GRPCClient) *Storage {
+	logger.Print("Attempting to initialize GRPC client")
 	bankCardDB := make(map[string]modelstorage.BankCard)
 	loginPasswordDB := make(map[string]modelstorage.LoginAndPassword)
 	textBinaryDB := make(map[string]modelstorage.TextOrBinary)
@@ -33,50 +34,55 @@ func InitStorage(logger *log.Logger, client grpcclient.GRPCClient) *Storage {
 		logger:          logger,
 		clientGRPC:      client,
 	}
-	st.logger.Print("Storage initiated")
 	return &st
 }
 
-func (s *Storage) Remove(identifier string) (string, error) {
-	status := ""
-	_, ok := s.bankCardDB[identifier]
-	if ok {
-		s.logger.Print("Removing entry from bank card storage:", identifier)
-		_, err := s.clientGRPC.Remove(identifier, "bankCard")
-		if err != nil {
-			s.logger.Print("Could not remove bank card entry:", err.Error())
-			return status, err
+func (s *Storage) Remove(identifier, db string) error {
+	var err error
+	switch db {
+	case "bankCard":
+		_, ok := s.bankCardDB[identifier]
+		if ok {
+			s.logger.Print("Removing entry from bank card storage:", identifier)
+			_, err := s.clientGRPC.RemoveBankCard(identifier)
+			if err != nil {
+				s.logger.Print("Could not remove bank card entry:", err.Error())
+				return err
+			}
+			delete(s.bankCardDB, identifier)
+		} else {
+			err = fmt.Errorf("entry ID %s in %s storage does not exist", identifier, db)
 		}
-		delete(s.bankCardDB, identifier)
-		status += fmt.Sprintf("removed entry %s from bank card storage\n", identifier)
-	}
-	_, ok = s.loginPasswordDB[identifier]
-	if ok {
-		s.logger.Print("Removing entry from login/password storage:", identifier)
-		_, err := s.clientGRPC.Remove(identifier, "loginPassword")
-		if err != nil {
-			s.logger.Print("Could not remove login/password entry:", err.Error())
-			return status, err
+	case "loginPassword":
+		_, ok := s.loginPasswordDB[identifier]
+		if ok {
+			s.logger.Print("Removing entry from login/password storage:", identifier)
+			_, err := s.clientGRPC.RemoveLoginPassword(identifier)
+			if err != nil {
+				s.logger.Print("Could not remove login/password entry:", err.Error())
+				return err
+			}
+			delete(s.loginPasswordDB, identifier)
+		} else {
+			err = fmt.Errorf("entry ID %s in %s storage does not exist", identifier, db)
 		}
-		delete(s.loginPasswordDB, identifier)
-		status += fmt.Sprintf("removed entry %s from login/password storage\n", identifier)
-	}
-	_, ok = s.textBinaryDB[identifier]
-	if ok {
-		s.logger.Print("Removing entry from text/binary storage:", identifier)
-		_, err := s.clientGRPC.Remove(identifier, "textBinary")
-		if err != nil {
-			s.logger.Print("Could not remove text/binary entry:", err.Error())
-			return status, err
+	case "textBinary":
+		_, ok := s.textBinaryDB[identifier]
+		if ok {
+			s.logger.Print("Removing entry from text/binary storage:", identifier)
+			_, err := s.clientGRPC.RemoveTextBinary(identifier)
+			if err != nil {
+				s.logger.Print("Could not remove text/binary entry:", err.Error())
+				return err
+			}
+			delete(s.textBinaryDB, identifier)
+		} else {
+			err = fmt.Errorf("entry ID %s in %s storage does not exist", identifier, db)
 		}
-		delete(s.textBinaryDB, identifier)
-		status += fmt.Sprintf("removed entry %s from text/binary storage\n", identifier)
+	default:
+		err = fmt.Errorf("invalid db %s", db)
 	}
-	if status == "" {
-		s.logger.Print("Not found in storage:", identifier)
-		return status, fmt.Errorf("identifier %s was not found in storage", identifier)
-	}
-	return status, nil
+	return err
 }
 
 func (s *Storage) LoginRegister(login, password string) error {
@@ -89,6 +95,7 @@ func (s *Storage) LoginRegister(login, password string) error {
 		s.logger.Print("Could not perform login/register request:", err.Error())
 		return err
 	}
+	s.CleanDB()
 	return nil
 }
 
@@ -111,6 +118,7 @@ func (s *Storage) AddBankCard(identifier, number, holder, cvv, meta string) erro
 	if err != nil {
 		delete(s.bankCardDB, identifier)
 		s.logger.Print("Could not upload bank card entry:", err.Error())
+		return err
 	}
 	return nil
 }
@@ -133,6 +141,7 @@ func (s *Storage) AddLoginPassword(identifier, login, password, meta string) err
 	if err != nil {
 		delete(s.loginPasswordDB, identifier)
 		s.logger.Print("Could not upload login.password entry:", err.Error())
+		return err
 	}
 	return nil
 }
@@ -154,13 +163,14 @@ func (s *Storage) AddTextBinary(identifier, entry, meta string) error {
 	if err != nil {
 		delete(s.textBinaryDB, identifier)
 		s.logger.Print("Could not upload text/binary entry:", err.Error())
+		return err
 	}
 	return nil
 }
 
-func (s *Storage) Sync(ctx context.Context) error {
+func (s *Storage) Sync() error {
 	s.logger.Print("Attempting sync")
-	grp, ctx := errgroup.WithContext(ctx)
+	grp, _ := errgroup.WithContext(context.Background())
 	funcs := []func() error{s.dumpTextsBinaries, s.dumpLoginsPasswords, s.dumpBankCards}
 	for _, fn := range funcs {
 		grp.Go(fn)
@@ -208,18 +218,35 @@ func (s *Storage) dumpTextsBinaries() error {
 	return nil
 }
 
-func (s *Storage) ShowAllData() string {
-	data := ""
-	for _, value := range s.textBinaryDB {
-		data += fmt.Sprintf("%#v", value) + "\n"
+func (s *Storage) Get(identifier, db string) (string, error) {
+	var err error
+	var data string
+	switch db {
+	case "bankCard":
+		value, ok := s.bankCardDB[identifier]
+		if ok {
+			data = fmt.Sprintf("%#v", value) + "\n"
+		} else {
+			err = fmt.Errorf("entry ID %s in %s storage does not exist", identifier, db)
+		}
+	case "loginPassword":
+		value, ok := s.loginPasswordDB[identifier]
+		if ok {
+			data = fmt.Sprintf("%#v", value) + "\n"
+		} else {
+			err = fmt.Errorf("entry ID %s in %s storage does not exist", identifier, db)
+		}
+	case "textBinary":
+		value, ok := s.textBinaryDB[identifier]
+		if ok {
+			data = fmt.Sprintf("%#v", value) + "\n"
+		} else {
+			err = fmt.Errorf("entry ID %s in %s storage does not exist", identifier, db)
+		}
+	default:
+		err = fmt.Errorf("invalid db %s", db)
 	}
-	for _, value := range s.loginPasswordDB {
-		data += fmt.Sprintf("%#v", value) + "\n"
-	}
-	for _, value := range s.bankCardDB {
-		data += fmt.Sprintf("%#v", value) + "\n"
-	}
-	return data
+	return data, err
 }
 
 func (s *Storage) CleanDB() {

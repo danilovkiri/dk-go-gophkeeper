@@ -1,0 +1,92 @@
+syntax = "proto3";
+
+package proto;
+
+import "google/protobuf/empty.proto";
+
+option go_package = "grpc/proto";
+
+message LoginRegisterRequest {
+  string login = 1;
+  string password = 2;
+}
+
+message ResponsePieceTextBinary {
+  string identifier = 1;
+  string entry = 2;
+  string meta = 3;
+}
+
+message GetTextsBinariesResponse {
+  repeated ResponsePieceTextBinary response_pieces_texts_binaries = 1;
+}
+
+message ResponsePieceLoginPassword {
+  string identifier = 1;
+  string login = 2;
+  string password = 3;
+  string meta = 4;
+}
+
+message GetLoginsPasswordsResponse {
+  repeated ResponsePieceLoginPassword response_pieces_logins_passwords = 1;
+}
+
+message ResponsePieceBankCard {
+  string identifier = 1;
+  string number = 2;
+  string holder = 3;
+  string cvv = 4;
+  string meta = 5;
+}
+
+message GetBankCardsResponse {
+  repeated ResponsePieceBankCard response_pieces_bank_cards = 1;
+}
+
+message SendBankCardRequest {
+  string identifier = 1;
+  string number = 2;
+  string holder = 3;
+  string cvv = 4;
+  string meta = 5;
+}
+
+message SendLoginPasswordRequest {
+  string identifier = 1;
+  string login = 2;
+  string password = 3;
+  string meta = 4;
+}
+
+message SendTextBinaryRequest {
+  string identifier = 1;
+  string entry = 2;
+  string meta = 3;
+}
+
+message DeleteBankCardRequest {
+  string identifier = 1;
+}
+
+message DeleteLoginPasswordRequest {
+  string identifier = 1;
+}
+
+message DeleteTextBinaryRequest {
+  string identifier = 1;
+}
+
+service Gophkeeper {
+  rpc LoginRegister(LoginRegisterRequest) returns (google.protobuf.Empty);
+  rpc DeleteBankCard(DeleteBankCardRequest) returns (google.protobuf.Empty);
+  rpc DeleteLoginPassword(DeleteLoginPasswordRequest) returns (google.protobuf.Empty);
+  rpc DeleteTextBinary(DeleteTextBinaryRequest) returns (google.protobuf.Empty);
+  rpc PostBankCard(SendBankCardRequest) returns (google.protobuf.Empty);
+  rpc PostLoginPassword(SendLoginPasswordRequest) returns (google.protobuf.Empty);
+  rpc PostTextBinary(SendTextBinaryRequest) returns (google.protobuf.Empty);
+  rpc GetTextsBinaries(google.protobuf.Empty) returns (GetTextsBinariesResponse);
+  rpc GetLoginsPasswords(google.protobuf.Empty) returns (GetLoginsPasswordsResponse);
+  rpc GetBankCards(google.protobuf.Empty) returns (GetBankCardsResponse);
+
+}

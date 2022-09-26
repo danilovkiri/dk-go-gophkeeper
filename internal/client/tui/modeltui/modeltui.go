@@ -25,5 +25,10 @@ type (
 	}
 	Removal struct {
 		Identifier string
+		Db         string
+	}
+	Get struct {
+		Identifier string
+		Db         string
 	}
 )

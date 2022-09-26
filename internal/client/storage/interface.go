@@ -1,9 +1,5 @@
 package storage
 
-import (
-	"context"
-)
-
 // BankCardAdder defines a set of methods for types implementing BankCardAdder.
 type BankCardAdder interface {
 	AddBankCard(identifier, number, holder, cvv, meta string) error
@@ -19,19 +15,19 @@ type TextBinaryAdder interface {
 	AddTextBinary(identifier, entry, meta string) error
 }
 
-// AllDataGetter defines a set of methods for types implementing AllDataGetter.
-type AllDataGetter interface {
-	ShowAllData() string
-}
-
 // Syncer defines a set of methods for types implementing Syncer.
 type Syncer interface {
-	Sync(ctx context.Context) error
+	Sync() error
 }
 
 // Remover defines a set of methods for types implementing Remover.
 type Remover interface {
-	Remove(string) (string, error)
+	Remove(string, string) error
+}
+
+// Getter defines a set of methods for types implementing Getter.
+type Getter interface {
+	Get(string, string) (string, error)
 }
 
 // Cleaner defines a set of methods for types implementing Cleaner.
@@ -49,8 +45,8 @@ type DataStorage interface {
 	BankCardAdder
 	LoginPasswordAdder
 	TextBinaryAdder
+	Getter
 	Syncer
-	AllDataGetter
 	Remover
 	Cleaner
 	Authorizer
