@@ -22,17 +22,19 @@ func main() {
 	defer flog.Close()
 	logger := log.New(flog, `client `, log.LstdFlags|log.Lshortfile)
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	cfg := config.NewDefaultConfiguration()
 	clientGRPC := client.InitGRPCClient(ctx, logger, wg, cfg)
 	storage := inmemory.InitStorage(logger, clientGRPC)
-	app := tui.InitTUI(ctx, storage, logger)
+	app := tui.InitTUI(cancel, storage, logger)
 	app.Run()
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-done
-		cancel()
+		logger.Print("Shutting down by external signal initiated")
 		app.App.Stop()
+		cancel()
 	}()
 	wg.Wait()
 }

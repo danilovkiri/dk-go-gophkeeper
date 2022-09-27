@@ -23,7 +23,7 @@ type Storage struct {
 }
 
 func InitStorage(logger *log.Logger, client grpcclient.GRPCClient) *Storage {
-	logger.Print("Attempting to initialize GRPC client")
+	logger.Print("Attempting to initialize storage")
 	bankCardDB := make(map[string]modelstorage.BankCard)
 	loginPasswordDB := make(map[string]modelstorage.LoginAndPassword)
 	textBinaryDB := make(map[string]modelstorage.TextOrBinary)

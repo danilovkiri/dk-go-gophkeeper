@@ -55,6 +55,7 @@ func InitGRPCClient(ctx context.Context, logger *log.Logger, wg *sync.WaitGroup,
 		if err != nil {
 			client.logger.Fatal(err)
 		}
+		client.logger.Print("GRPC client closed")
 	}()
 	return &client
 }

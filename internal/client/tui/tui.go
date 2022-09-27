@@ -48,7 +48,7 @@ var body = tview.NewFlex().AddItem(input, 0, 1, false)
 type App struct {
 	App                    *tview.Application
 	storage                storage.DataStorage
-	ctx                    context.Context
+	cancel                 context.CancelFunc
 	registerLoginDetails   modeltui.RegisterLogin
 	registerLoginForm      *tview.Form
 	bankCards              []modeltui.BankCard
@@ -224,12 +224,13 @@ func (a *App) addRegisterLoginForm() *tview.Form {
 	return a.registerLoginForm
 }
 
-func InitTUI(ctx context.Context, storage storage.DataStorage, logger *log.Logger) App {
+func InitTUI(cancel context.CancelFunc, storage storage.DataStorage, logger *log.Logger) App {
+	logger.Print("Attempting to initialize TUI")
 	var app = tview.NewApplication()
 	application := App{
 		App:                    app,
 		storage:                storage,
-		ctx:                    ctx,
+		cancel:                 cancel,
 		registerLoginDetails:   modeltui.RegisterLogin{},
 		registerLoginForm:      tview.NewForm(),
 		bankCards:              make([]modeltui.BankCard, 0),
@@ -245,11 +246,11 @@ func InitTUI(ctx context.Context, storage storage.DataStorage, logger *log.Logge
 		result:                 tview.NewTextView().SetText("Nothing was requested yet").SetTextAlign(1).SetScrollable(true),
 		logger:                 logger,
 	}
-	application.logger.Print("TUI initiated")
 	return application
 }
 
 func (a *App) Run() {
+	defer a.cancel()
 	buttonStoreLoginPassword.SetSelectedFunc(func() {
 		a.storeLoginPasswordForm.Clear(true)
 		a.addLoginPasswordForm()
@@ -277,6 +278,7 @@ func (a *App) Run() {
 	})
 	buttonQuit.SetSelectedFunc(func() {
 		a.App.Stop()
+		a.cancel()
 	})
 	buttonSync.SetSelectedFunc(func() {
 		err := a.storage.Sync()
@@ -316,7 +318,9 @@ func (a *App) Run() {
 	pages.AddPage("get_data", a.retrieveDataPieceForm, true, false)
 	pages.AddPage("result", resultView, true, false)
 
+	a.logger.Print("Starting the TUI")
 	if err := a.App.SetRoot(pages, true).EnableMouse(true).Run(); err != nil {
 		log.Panic(err)
 	}
+	a.logger.Print("TUI closed, Run() function returned")
 }
