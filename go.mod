@@ -3,13 +3,13 @@ module dk-go-gophkeeper
 go 1.19
 
 require (
+	github.com/google/uuid v1.1.2
 	github.com/ilyakaznacheev/cleanenv v1.3.0
 	github.com/jackc/pgconn v1.13.0
 	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa
 	github.com/jackc/pgx/v4 v4.17.2
 	github.com/lib/pq v1.10.2
 	github.com/rivo/tview v0.0.0-20220916081518-2e69b7385a37
-	github.com/speps/go-hashids/v2 v2.0.1
 	golang.org/x/sync v0.0.0-20220923202941-7f9b1623fab7
 	google.golang.org/grpc v1.49.0
 	google.golang.org/protobuf v1.27.1

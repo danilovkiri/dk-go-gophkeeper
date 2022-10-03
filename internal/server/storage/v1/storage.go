@@ -278,13 +278,13 @@ func (s *Storage) SetBankCardData(ctx context.Context, userID, identifier, numbe
 
 	select {
 	case <-ctx.Done():
-		s.logger.Print("adding new bank card failed for ID %s", identifier)
+		s.logger.Printf("adding new bank card failed for ID %s", identifier)
 		return &storageErrors.ContextTimeoutExceededError{Err: ctx.Err()}
 	case methodErr := <-chanEr:
-		s.logger.Print("adding new bank card failed for ID %s", identifier)
+		s.logger.Printf("adding new bank card failed for ID %s", identifier)
 		return methodErr
 	case <-chanOk:
-		s.logger.Print("adding new bank card done for ID %s", identifier)
+		s.logger.Printf("adding new bank card done for ID %s", identifier)
 		return nil
 	}
 }
@@ -325,13 +325,13 @@ func (s *Storage) SetLoginPasswordData(ctx context.Context, userID, identifier, 
 
 	select {
 	case <-ctx.Done():
-		s.logger.Print("adding new login/password failed for ID %s", identifier)
+		s.logger.Printf("adding new login/password failed for ID %s", identifier)
 		return &storageErrors.ContextTimeoutExceededError{Err: ctx.Err()}
 	case methodErr := <-chanEr:
-		s.logger.Print("adding new login/password failed for ID %s", identifier)
+		s.logger.Printf("adding new login/password failed for ID %s", identifier)
 		return methodErr
 	case <-chanOk:
-		s.logger.Print("adding new login/password done for ID %s", identifier)
+		s.logger.Printf("adding new login/password done for ID %s", identifier)
 		return nil
 	}
 }
@@ -372,13 +372,13 @@ func (s *Storage) SetTextBinaryData(ctx context.Context, userID, identifier, ent
 
 	select {
 	case <-ctx.Done():
-		s.logger.Print("adding new text/binary failed for ID %s", identifier)
+		s.logger.Printf("adding new text/binary failed for ID %s", identifier)
 		return &storageErrors.ContextTimeoutExceededError{Err: ctx.Err()}
 	case methodErr := <-chanEr:
-		s.logger.Print("adding new text/binary failed for ID %s", identifier)
+		s.logger.Printf("adding new text/binary failed for ID %s", identifier)
 		return methodErr
 	case <-chanOk:
-		s.logger.Print("adding new text/binary done for ID %s", identifier)
+		s.logger.Printf("adding new text/binary done for ID %s", identifier)
 		return nil
 	}
 }
@@ -408,13 +408,13 @@ func (s *Storage) AddNewUser(ctx context.Context, login, password, userID string
 
 	select {
 	case <-ctx.Done():
-		s.logger.Print("adding new user failed for %s", login)
+		s.logger.Printf("adding new user failed for %s", login)
 		return &storageErrors.ContextTimeoutExceededError{Err: ctx.Err()}
 	case methodErr := <-chanEr:
-		s.logger.Print("adding new user failed for %s", login)
+		s.logger.Printf("adding new user failed for %s", login)
 		return methodErr
 	case <-chanOk:
-		s.logger.Print("adding new user done for %s", login)
+		s.logger.Printf("adding new user done for %s", login)
 		return nil
 	}
 }
