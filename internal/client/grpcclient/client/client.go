@@ -31,7 +31,7 @@ type GRPCClient struct {
 }
 
 func InitGRPCClient(ctx context.Context, logger *log.Logger, wg *sync.WaitGroup, cfg *config.Config) *GRPCClient {
-	logger.Print("Attempting to initialize GRPC client")
+	logger.Printf("Attempting to initialize GRPC client at %s", cfg.ServerAddress)
 	conn, err := grpc.Dial(cfg.ServerAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		logger.Fatal(err)
@@ -60,10 +60,10 @@ func InitGRPCClient(ctx context.Context, logger *log.Logger, wg *sync.WaitGroup,
 	return &client
 }
 
-func (c *GRPCClient) LoginRegister(credentials modelstorage.RegisterLogin) (codes.Code, error) {
-	c.logger.Print("Login/Register attempt received")
+func (c *GRPCClient) Login(credentials modelstorage.RegisterLogin) (codes.Code, error) {
+	c.logger.Print("Login attempt received")
 	var header, trailer metadata.MD
-	_, err := c.client.LoginRegister(c.ctx, &pb.LoginRegisterRequest{Login: credentials.Login, Password: credentials.Password}, grpc.Header(&header), grpc.Trailer(&trailer))
+	_, err := c.client.Login(c.ctx, &pb.LoginRegisterRequest{Login: credentials.Login, Password: credentials.Password}, grpc.Header(&header), grpc.Trailer(&trailer))
 	e, ok := status.FromError(err)
 	if err != nil {
 		c.logger.Print(err)
@@ -72,8 +72,27 @@ func (c *GRPCClient) LoginRegister(credentials modelstorage.RegisterLogin) (code
 		}
 		return codes.Unknown, err
 	}
-	token := header.Get("token")
-	md := metadata.New(map[string]string{"token": token[0]})
+	token := header.Get(c.cfg.AuthBearerName)
+	md := metadata.New(map[string]string{c.cfg.AuthBearerName: token[0]})
+	c.token = token[0]
+	c.md = md
+	return e.Code(), nil
+}
+
+func (c *GRPCClient) Register(credentials modelstorage.RegisterLogin) (codes.Code, error) {
+	c.logger.Print("Register attempt received")
+	var header, trailer metadata.MD
+	_, err := c.client.Register(c.ctx, &pb.LoginRegisterRequest{Login: credentials.Login, Password: credentials.Password}, grpc.Header(&header), grpc.Trailer(&trailer))
+	e, ok := status.FromError(err)
+	if err != nil {
+		c.logger.Print(err)
+		if ok {
+			return e.Code(), err
+		}
+		return codes.Unknown, err
+	}
+	token := header.Get(c.cfg.AuthBearerName)
+	md := metadata.New(map[string]string{c.cfg.AuthBearerName: token[0]})
 	c.token = token[0]
 	c.md = md
 	return e.Code(), nil

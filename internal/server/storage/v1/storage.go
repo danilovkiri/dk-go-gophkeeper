@@ -37,10 +37,12 @@ func InitStorage(ctx context.Context, logger *log.Logger, cfg *config.Config, wg
 	if err != nil {
 		logger.Fatal(err)
 	}
+	recordCh := make(chan modelstorage.Removal)
 	st := Storage{
 		cfg:    cfg,
 		logger: logger,
 		DB:     db,
+		ch:     recordCh,
 	}
 	err = st.createTables(ctx)
 	if err != nil {
@@ -408,37 +410,38 @@ func (s *Storage) AddNewUser(ctx context.Context, login, password, userID string
 
 	select {
 	case <-ctx.Done():
-		s.logger.Printf("adding new user failed for %s", login)
+		s.logger.Printf("Adding new user failed for %s due to context timeout", login)
 		return &storageErrors.ContextTimeoutExceededError{Err: ctx.Err()}
 	case methodErr := <-chanEr:
-		s.logger.Printf("adding new user failed for %s", login)
+		s.logger.Printf("Adding new user failed for %s due to storage error", login)
 		return methodErr
 	case <-chanOk:
-		s.logger.Printf("adding new user done for %s", login)
+		s.logger.Printf("Adding new user done for %s", login)
 		return nil
 	}
 }
 
 func (s *Storage) CheckUser(ctx context.Context, login, password string) (string, error) {
 	selectStmt, err := s.DB.PrepareContext(ctx, "SELECT * FROM users WHERE login = $1")
+	defer selectStmt.Close()
 	if err != nil {
 		return "", &storageErrors.StatementPSQLError{Err: err}
 	}
-	defer selectStmt.Close()
 	chanOk := make(chan string)
 	chanEr := make(chan error)
 	go func() {
 		s.mu.Lock()
 		defer s.mu.Unlock()
 		var queryOutput modelstorage.UserStorageEntry
-		err := selectStmt.QueryRowContext(ctx, login).Scan(&queryOutput.ID, &queryOutput.UserID, &queryOutput.Login, &queryOutput.Password, &queryOutput.RegisteredAt)
-		if err != nil {
+		err1 := selectStmt.QueryRowContext(ctx, login).Scan(&queryOutput.ID, &queryOutput.UserID, &queryOutput.Login, &queryOutput.Password, &queryOutput.RegisteredAt)
+		if err1 != nil {
 			switch {
-			case errors.Is(err, sql.ErrNoRows):
-				chanEr <- &storageErrors.NotFoundError{Err: err}
+			case errors.Is(err1, sql.ErrNoRows):
+				s.logger.Print("Absent login detected")
+				chanEr <- &storageErrors.NotFoundError{Err: err1}
 				return
 			default:
-				chanEr <- err
+				chanEr <- err1
 				return
 			}
 		}
@@ -446,20 +449,21 @@ func (s *Storage) CheckUser(ctx context.Context, login, password string) (string
 		expectedPasswordHash := sha256.Sum256([]byte(queryOutput.Password))
 		passwordMatch := subtle.ConstantTimeCompare(passwordHash[:], expectedPasswordHash[:]) == 1
 		if !passwordMatch {
-			chanEr <- &storageErrors.NotFoundError{Err: nil}
+			s.logger.Print("Unsuccessful authentication detected")
+			chanEr <- &storageErrors.InvalidPasswordError{Err: nil}
 		}
 		chanOk <- queryOutput.UserID
 	}()
 
 	select {
 	case <-ctx.Done():
-		s.logger.Print("user authentication failed")
+		s.logger.Print("User authentication failed due to context timeout")
 		return "", &storageErrors.ContextTimeoutExceededError{Err: ctx.Err()}
 	case methodErr := <-chanEr:
-		s.logger.Print("user authentication failed")
+		s.logger.Print("User authentication failed due to storage error")
 		return "", methodErr
 	case userID := <-chanOk:
-		s.logger.Print("user authentication done")
+		s.logger.Print("User authentication done")
 		return userID, nil
 	}
 }

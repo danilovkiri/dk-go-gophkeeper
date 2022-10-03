@@ -2,11 +2,12 @@ package processor
 
 import (
 	"context"
-	"dk-go-gophkeeper/internal/modeldto"
 	"dk-go-gophkeeper/internal/server/cipher"
+	"dk-go-gophkeeper/internal/server/modeldto"
 	"dk-go-gophkeeper/internal/server/processor"
 	"dk-go-gophkeeper/internal/server/storage"
 	"dk-go-gophkeeper/internal/server/storage/modelstorage"
+	"log"
 )
 
 var (
@@ -16,14 +17,17 @@ var (
 type Processor struct {
 	storage storage.DataStorage
 	cipher  cipher.Cipher
+	logger  *log.Logger
 }
 
-func InitService(st storage.DataStorage, cp cipher.Cipher) (*Processor, error) {
+func InitService(st storage.DataStorage, cp cipher.Cipher, logger *log.Logger) *Processor {
+	logger.Print("Attempting to initialize processor")
 	serviceProcessor := &Processor{
 		storage: st,
 		cipher:  cp,
+		logger:  logger,
 	}
-	return serviceProcessor, nil
+	return serviceProcessor
 }
 
 func (proc *Processor) GetUserID(accessToken string) (string, error) {

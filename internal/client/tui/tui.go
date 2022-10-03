@@ -26,11 +26,13 @@ var footer = tview.NewTextView().SetText(fmt.Sprint("Kirill Danilov, 2022, https
 var statusHeader = tview.NewTextView().SetText(fmt.Sprint("Last operation status:")).SetTextAlign(1)
 var buttonSync = tview.NewButton("Sync")
 var buttonQuit = tview.NewButton("Quit")
-var buttonRegisterLogin = tview.NewButton("Register/Login")
+var buttonLogin = tview.NewButton("Login")
+var buttonRegister = tview.NewButton("Register")
 var menu = tview.NewFlex().
 	AddItem(buttonSync, 0, 1, false).
 	AddItem(buttonQuit, 0, 1, false).
-	AddItem(buttonRegisterLogin, 0, 1, false)
+	AddItem(buttonLogin, 0, 1, false).
+	AddItem(buttonRegister, 0, 1, false)
 var buttonStoreLoginPassword = tview.NewButton("Add loginPassword item")
 var buttonStoreTextBinary = tview.NewButton("Add textBinary item")
 var buttonStoreBankCard = tview.NewButton("Add bankCard item")
@@ -50,7 +52,8 @@ type App struct {
 	storage                storage.DataStorage
 	cancel                 context.CancelFunc
 	registerLoginDetails   modeltui.RegisterLogin
-	registerLoginForm      *tview.Form
+	registerForm           *tview.Form
+	loginForm              *tview.Form
 	bankCards              []modeltui.BankCard
 	storeBankCardForm      *tview.Form
 	textsOrBinaries        []modeltui.TextOrBinary
@@ -201,15 +204,15 @@ func (a *App) addBankCardForm() *tview.Form {
 	return a.storeBankCardForm
 }
 
-func (a *App) addRegisterLoginForm() *tview.Form {
-	a.registerLoginForm.AddInputField("Login", "", 20, nil, func(login string) {
+func (a *App) addRegisterForm() *tview.Form {
+	a.registerForm.AddInputField("Login", "", 20, nil, func(login string) {
 		a.registerLoginDetails.Login = login
 	})
-	a.registerLoginForm.AddInputField("Password", "", 20, nil, func(password string) {
+	a.registerForm.AddInputField("Password", "", 20, nil, func(password string) {
 		a.registerLoginDetails.Password = password
 	})
-	a.registerLoginForm.AddButton("Submit", func() {
-		err := a.storage.LoginRegister(a.registerLoginDetails.Login, a.registerLoginDetails.Password)
+	a.registerForm.AddButton("Submit", func() {
+		err := a.storage.Register(a.registerLoginDetails.Login, a.registerLoginDetails.Password)
 		if err != nil {
 			a.operationStatus.SetText(err.Error())
 		} else {
@@ -218,10 +221,33 @@ func (a *App) addRegisterLoginForm() *tview.Form {
 		}
 		pages.SwitchToPage("menu")
 	})
-	a.registerLoginForm.AddButton("Exit", func() {
+	a.registerForm.AddButton("Exit", func() {
 		pages.SwitchToPage("menu")
 	})
-	return a.registerLoginForm
+	return a.registerForm
+}
+
+func (a *App) addLoginForm() *tview.Form {
+	a.loginForm.AddInputField("Login", "", 20, nil, func(login string) {
+		a.registerLoginDetails.Login = login
+	})
+	a.loginForm.AddInputField("Password", "", 20, nil, func(password string) {
+		a.registerLoginDetails.Password = password
+	})
+	a.loginForm.AddButton("Submit", func() {
+		err := a.storage.Login(a.registerLoginDetails.Login, a.registerLoginDetails.Password)
+		if err != nil {
+			a.operationStatus.SetText(err.Error())
+		} else {
+			a.operationStatus.SetText("Login/Register: OK")
+			a.loginStatus.SetText(fmt.Sprintf("Logged in as: %s", a.registerLoginDetails.Login))
+		}
+		pages.SwitchToPage("menu")
+	})
+	a.loginForm.AddButton("Exit", func() {
+		pages.SwitchToPage("menu")
+	})
+	return a.loginForm
 }
 
 func InitTUI(cancel context.CancelFunc, storage storage.DataStorage, logger *log.Logger) App {
@@ -232,7 +258,8 @@ func InitTUI(cancel context.CancelFunc, storage storage.DataStorage, logger *log
 		storage:                storage,
 		cancel:                 cancel,
 		registerLoginDetails:   modeltui.RegisterLogin{},
-		registerLoginForm:      tview.NewForm(),
+		registerForm:           tview.NewForm(),
+		loginForm:              tview.NewForm(),
 		bankCards:              make([]modeltui.BankCard, 0),
 		storeBankCardForm:      tview.NewForm(),
 		textsOrBinaries:        make([]modeltui.TextOrBinary, 0),
@@ -271,10 +298,15 @@ func (a *App) Run() {
 		a.addRemovalForm()
 		pages.SwitchToPage("remove")
 	})
-	buttonRegisterLogin.SetSelectedFunc(func() {
-		a.registerLoginForm.Clear(true)
-		a.addRegisterLoginForm()
-		pages.SwitchToPage("register_login")
+	buttonRegister.SetSelectedFunc(func() {
+		a.registerForm.Clear(true)
+		a.addRegisterForm()
+		pages.SwitchToPage("register")
+	})
+	buttonLogin.SetSelectedFunc(func() {
+		a.loginForm.Clear(true)
+		a.addLoginForm()
+		pages.SwitchToPage("login")
 	})
 	buttonQuit.SetSelectedFunc(func() {
 		a.App.Stop()
@@ -313,7 +345,8 @@ func (a *App) Run() {
 	pages.AddPage("store_login_password", a.storeLoginPasswordForm, true, false)
 	pages.AddPage("store_text_binary", a.storeTextOrBinaryForm, true, false)
 	pages.AddPage("store_bank_card", a.storeBankCardForm, true, false)
-	pages.AddPage("register_login", a.registerLoginForm, true, false)
+	pages.AddPage("register", a.registerForm, true, false)
+	pages.AddPage("login", a.loginForm, true, false)
 	pages.AddPage("remove", a.removeForm, true, false)
 	pages.AddPage("get_data", a.retrieveDataPieceForm, true, false)
 	pages.AddPage("result", resultView, true, false)

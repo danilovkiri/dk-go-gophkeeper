@@ -2,7 +2,7 @@ package processor
 
 import (
 	"context"
-	"dk-go-gophkeeper/internal/modeldto"
+	"dk-go-gophkeeper/internal/server/modeldto"
 )
 
 type Authorizer interface {

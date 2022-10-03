@@ -85,14 +85,28 @@ func (s *Storage) Remove(identifier, db string) error {
 	return err
 }
 
-func (s *Storage) LoginRegister(login, password string) error {
+func (s *Storage) Login(login, password string) error {
 	newLoginRegisterEntry := modelstorage.RegisterLogin{
 		Login:    login,
 		Password: password,
 	}
-	_, err := s.clientGRPC.LoginRegister(newLoginRegisterEntry)
+	_, err := s.clientGRPC.Login(newLoginRegisterEntry)
 	if err != nil {
-		s.logger.Print("Could not perform login/register request:", err.Error())
+		s.logger.Print("Could not perform login request:", err.Error())
+		return err
+	}
+	s.CleanDB()
+	return nil
+}
+
+func (s *Storage) Register(login, password string) error {
+	newLoginRegisterEntry := modelstorage.RegisterLogin{
+		Login:    login,
+		Password: password,
+	}
+	_, err := s.clientGRPC.Register(newLoginRegisterEntry)
+	if err != nil {
+		s.logger.Print("Could not perform register request:", err.Error())
 		return err
 	}
 	s.CleanDB()

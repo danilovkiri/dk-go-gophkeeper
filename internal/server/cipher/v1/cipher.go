@@ -8,6 +8,7 @@ import (
 	procCipher "dk-go-gophkeeper/internal/server/cipher"
 	"encoding/hex"
 	"github.com/google/uuid"
+	"log"
 )
 
 var (
@@ -18,10 +19,12 @@ type Cipher struct {
 	aesgcm cipher.AEAD
 	nonce  []byte
 	key    []byte
+	logger *log.Logger
 }
 
-func NewCipherService(c *config.Config) (*Cipher, error) {
-	key := sha256.Sum256([]byte(c.UserKey))
+func NewCipherService(cfg *config.Config, logger *log.Logger) (*Cipher, error) {
+	logger.Print("Attempting to initialize cipher")
+	key := sha256.Sum256([]byte(cfg.UserKey))
 	aesblock, err := aes.NewCipher(key[:])
 	if err != nil {
 		return nil, err
@@ -34,7 +37,8 @@ func NewCipherService(c *config.Config) (*Cipher, error) {
 	return &Cipher{
 		aesgcm: aesgcm,
 		nonce:  nonce,
-		key:    []byte(c.UserKey),
+		key:    []byte(cfg.UserKey),
+		logger: logger,
 	}, nil
 }
 

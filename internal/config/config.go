@@ -9,9 +9,10 @@ import (
 
 // Config handles all constants and parameters.
 type Config struct {
-	ServerAddress string `json:"server_address" env:"SERVER_ADDRESS"`
-	DatabaseDSN   string `json:"database_dsn" env:"DATABASE_DSN"`
-	UserKey       string `env:"USER_KEY" env-default:"jds__63h3_7ds"`
+	ServerAddress  string `json:"server_address" env:"SERVER_ADDRESS"`
+	DatabaseDSN    string `json:"database_dsn" env:"DATABASE_DSN"`
+	UserKey        string `env:"USER_KEY" env-default:"jds__63h3_7ds"`
+	AuthBearerName string `env:"BEARER_KEY" env-default:"token"`
 }
 
 // NewDefaultConfiguration initializes a configuration struct.

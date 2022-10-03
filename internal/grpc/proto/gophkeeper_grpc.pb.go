@@ -23,7 +23,8 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type GophkeeperClient interface {
-	LoginRegister(ctx context.Context, in *LoginRegisterRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	Login(ctx context.Context, in *LoginRegisterRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	Register(ctx context.Context, in *LoginRegisterRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	DeleteBankCard(ctx context.Context, in *DeleteBankCardRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	DeleteLoginPassword(ctx context.Context, in *DeleteLoginPasswordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	DeleteTextBinary(ctx context.Context, in *DeleteTextBinaryRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -43,9 +44,18 @@ func NewGophkeeperClient(cc grpc.ClientConnInterface) GophkeeperClient {
 	return &gophkeeperClient{cc}
 }
 
-func (c *gophkeeperClient) LoginRegister(ctx context.Context, in *LoginRegisterRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *gophkeeperClient) Login(ctx context.Context, in *LoginRegisterRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/proto.Gophkeeper/LoginRegister", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/proto.Gophkeeper/Login", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *gophkeeperClient) Register(ctx context.Context, in *LoginRegisterRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/proto.Gophkeeper/Register", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +147,8 @@ func (c *gophkeeperClient) GetBankCards(ctx context.Context, in *emptypb.Empty, 
 // All implementations must embed UnimplementedGophkeeperServer
 // for forward compatibility
 type GophkeeperServer interface {
-	LoginRegister(context.Context, *LoginRegisterRequest) (*emptypb.Empty, error)
+	Login(context.Context, *LoginRegisterRequest) (*emptypb.Empty, error)
+	Register(context.Context, *LoginRegisterRequest) (*emptypb.Empty, error)
 	DeleteBankCard(context.Context, *DeleteBankCardRequest) (*emptypb.Empty, error)
 	DeleteLoginPassword(context.Context, *DeleteLoginPasswordRequest) (*emptypb.Empty, error)
 	DeleteTextBinary(context.Context, *DeleteTextBinaryRequest) (*emptypb.Empty, error)
@@ -154,8 +165,11 @@ type GophkeeperServer interface {
 type UnimplementedGophkeeperServer struct {
 }
 
-func (UnimplementedGophkeeperServer) LoginRegister(context.Context, *LoginRegisterRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method LoginRegister not implemented")
+func (UnimplementedGophkeeperServer) Login(context.Context, *LoginRegisterRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Login not implemented")
+}
+func (UnimplementedGophkeeperServer) Register(context.Context, *LoginRegisterRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Register not implemented")
 }
 func (UnimplementedGophkeeperServer) DeleteBankCard(context.Context, *DeleteBankCardRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteBankCard not implemented")
@@ -197,20 +211,38 @@ func RegisterGophkeeperServer(s grpc.ServiceRegistrar, srv GophkeeperServer) {
 	s.RegisterService(&Gophkeeper_ServiceDesc, srv)
 }
 
-func _Gophkeeper_LoginRegister_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Gophkeeper_Login_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(LoginRegisterRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(GophkeeperServer).LoginRegister(ctx, in)
+		return srv.(GophkeeperServer).Login(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/proto.Gophkeeper/LoginRegister",
+		FullMethod: "/proto.Gophkeeper/Login",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GophkeeperServer).LoginRegister(ctx, req.(*LoginRegisterRequest))
+		return srv.(GophkeeperServer).Login(ctx, req.(*LoginRegisterRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Gophkeeper_Register_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LoginRegisterRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GophkeeperServer).Register(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.Gophkeeper/Register",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GophkeeperServer).Register(ctx, req.(*LoginRegisterRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -385,8 +417,12 @@ var Gophkeeper_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*GophkeeperServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "LoginRegister",
-			Handler:    _Gophkeeper_LoginRegister_Handler,
+			MethodName: "Login",
+			Handler:    _Gophkeeper_Login_Handler,
+		},
+		{
+			MethodName: "Register",
+			Handler:    _Gophkeeper_Register_Handler,
 		},
 		{
 			MethodName: "DeleteBankCard",

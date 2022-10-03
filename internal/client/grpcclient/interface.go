@@ -44,7 +44,8 @@ type Remover interface {
 
 // Authorizer defines a set of methods for types implementing Authorizer.
 type Authorizer interface {
-	LoginRegister(modelstorage.RegisterLogin) (codes.Code, error)
+	Login(modelstorage.RegisterLogin) (codes.Code, error)
+	Register(modelstorage.RegisterLogin) (codes.Code, error)
 }
 
 // GRPCClient defines a set of embedded interfaces for types implementing GRPCClient.

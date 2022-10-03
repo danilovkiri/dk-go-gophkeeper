@@ -24,6 +24,10 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	cfg := config.NewDefaultConfiguration()
+	err = cfg.Parse()
+	if err != nil {
+		logger.Fatal(err)
+	}
 	clientGRPC := client.InitGRPCClient(ctx, logger, wg, cfg)
 	storage := inmemory.InitStorage(logger, clientGRPC)
 	app := tui.InitTUI(cancel, storage, logger)

@@ -30,6 +30,9 @@ type (
 	ScanningPSQLError struct {
 		Err error
 	}
+	InvalidPasswordError struct {
+		Err error
+	}
 )
 
 func (e *WrongDBError) Error() string {
@@ -58,4 +61,8 @@ func (e *NotFoundError) Error() string {
 
 func (e *ScanningPSQLError) Error() string {
 	return fmt.Sprintf("%s: could not scan rows", e.Err.Error())
+}
+
+func (e *InvalidPasswordError) Error() string {
+	return "password is invalid"
 }

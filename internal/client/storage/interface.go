@@ -37,7 +37,8 @@ type Cleaner interface {
 
 // Authorizer defines a set of methods for types implementing Authorizer.
 type Authorizer interface {
-	LoginRegister(login, password string) error
+	Login(login, password string) error
+	Register(login, password string) error
 }
 
 // DataStorage defines a set of embedded interfaces for types implementing DataStorage.

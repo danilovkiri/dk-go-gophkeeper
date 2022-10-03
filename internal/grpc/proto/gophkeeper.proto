@@ -78,7 +78,8 @@ message DeleteTextBinaryRequest {
 }
 
 service Gophkeeper {
-  rpc LoginRegister(LoginRegisterRequest) returns (google.protobuf.Empty);
+  rpc Login(LoginRegisterRequest) returns (google.protobuf.Empty);
+  rpc Register(LoginRegisterRequest) returns (google.protobuf.Empty);
   rpc DeleteBankCard(DeleteBankCardRequest) returns (google.protobuf.Empty);
   rpc DeleteLoginPassword(DeleteLoginPasswordRequest) returns (google.protobuf.Empty);
   rpc DeleteTextBinary(DeleteTextBinaryRequest) returns (google.protobuf.Empty);
