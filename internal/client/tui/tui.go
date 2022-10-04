@@ -7,6 +7,7 @@ import (
 	"dk-go-gophkeeper/internal/client/tui/modeltui"
 	"dk-go-gophkeeper/internal/config"
 	"fmt"
+	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"log"
 )
@@ -24,17 +25,20 @@ var pages = tview.NewPages()
 
 // start screen static attributes
 
-var header = tview.NewTextView().SetText(fmt.Sprintf("GophKeeper: build %s, date %s, commit %s", buildVersion, buildDate, buildCommit)).SetTextAlign(1)
-var footer = tview.NewTextView().SetText("Kirill Danilov, 2022, https://github.com/danilovkiri/").SetTextAlign(1)
-var statusHeader = tview.NewTextView().SetText("Last operation status:").SetTextAlign(1)
+var header = tview.NewTextView().SetText(fmt.Sprintf("GophKeeper: build %s, date %s, commit %s", buildVersion, buildDate, buildCommit)).SetTextAlign(1).SetTextColor(tcell.ColorGreen)
+var footer = tview.NewTextView().SetText("Kirill Danilov, 2022, https://github.com/danilovkiri/").SetTextAlign(1).SetTextColor(tcell.ColorGreen)
+var statusHeader = tview.NewTextView().SetText("Last operation status:").SetTextAlign(1).SetTextColor(tcell.ColorGreen)
 var buttonSync = tview.NewButton("Sync")
 var buttonQuit = tview.NewButton("Quit")
 var buttonLogin = tview.NewButton("Login")
 var buttonRegister = tview.NewButton("Register")
 var menu = tview.NewFlex().
 	AddItem(buttonSync, 0, 1, false).
+	AddItem(tview.NewBox(), 0, 1, false).
 	AddItem(buttonQuit, 0, 1, false).
+	AddItem(tview.NewBox(), 0, 1, false).
 	AddItem(buttonLogin, 0, 1, false).
+	AddItem(tview.NewBox(), 0, 1, false).
 	AddItem(buttonRegister, 0, 1, false)
 var buttonStoreLoginPassword = tview.NewButton("Add loginPassword item")
 var buttonStoreTextBinary = tview.NewButton("Add textBinary item")
@@ -43,11 +47,15 @@ var buttonGetData = tview.NewButton("Get item")
 var buttonRemove = tview.NewButton("Remove item")
 var buttonBackToMainScreen = tview.NewButton("Back to menu")
 var input = tview.NewFlex().SetDirection(tview.FlexRow).
-	AddItem(buttonStoreLoginPassword, 0, 1, false).
-	AddItem(buttonStoreTextBinary, 0, 1, false).
-	AddItem(buttonStoreBankCard, 0, 1, false).
-	AddItem(buttonGetData, 0, 1, false).
-	AddItem(buttonRemove, 0, 1, false)
+	AddItem(buttonStoreLoginPassword, 0, 10, false).
+	AddItem(tview.NewBox(), 0, 2, false).
+	AddItem(buttonStoreTextBinary, 0, 10, false).
+	AddItem(tview.NewBox(), 0, 2, false).
+	AddItem(buttonStoreBankCard, 0, 10, false).
+	AddItem(tview.NewBox(), 0, 2, false).
+	AddItem(buttonGetData, 0, 10, false).
+	AddItem(tview.NewBox(), 0, 2, false).
+	AddItem(buttonRemove, 0, 10, false)
 var body = tview.NewFlex().AddItem(input, 0, 1, false)
 
 // App defines attributes and methods of an App instance.
@@ -280,8 +288,8 @@ func InitTUI(cancel context.CancelFunc, storage storage.DataStorage, logger *log
 		storeLoginPasswordForm: tview.NewForm(),
 		removeForm:             tview.NewForm(),
 		retrieveDataPieceForm:  tview.NewForm(),
-		loginStatus:            tview.NewTextView().SetText("Logged in as: NA").SetTextAlign(1).SetScrollable(true),
-		operationStatus:        tview.NewTextView().SetText("Nothing to report yet").SetTextAlign(1).SetScrollable(true),
+		loginStatus:            tview.NewTextView().SetText("Logged in as: NA").SetTextAlign(1).SetScrollable(true).SetTextColor(tcell.ColorRed),
+		operationStatus:        tview.NewTextView().SetText("Nothing to report yet").SetTextAlign(1).SetScrollable(true).SetTextColor(tcell.ColorRed),
 		result:                 tview.NewTextView().SetText("Nothing was requested yet").SetTextAlign(1).SetScrollable(true),
 		logger:                 logger,
 		cfg:                    cfg,
@@ -348,9 +356,11 @@ func (a *App) Run() {
 		AddItem(buttonBackToMainScreen, 0, 1, false)
 
 	flex.SetDirection(tview.FlexRow).AddItem(header, 0, 1, false).
-		AddItem(a.loginStatus, 0, 1, false).
+		AddItem(a.loginStatus, 0, 2, false).
 		AddItem(menu, 0, 1, false).
+		AddItem(tview.NewBox(), 0, 2, false).
 		AddItem(body, 0, 20, false).
+		AddItem(tview.NewBox(), 0, 2, false).
 		AddItem(statusHeader, 0, 1, false).
 		AddItem(a.operationStatus, 0, 5, false).
 		AddItem(footer, 0, 1, false)

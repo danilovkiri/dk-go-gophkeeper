@@ -15,8 +15,8 @@ type Config struct {
 	UserKey         string `env:"USER_KEY" env-default:"jds__63h3_7ds"`
 	AuthBearerName  string `env:"BEARER_KEY" env-default:"token"`
 	BankCardDB      string `env:"BANK_CARD_DB" env-default:"bankCard"`
-	LoginPasswordDB string `env:"BANK_CARD_DB" env-default:"loginPassword"`
-	TextBinaryDB    string `env:"BANK_CARD_DB" env-default:"textBinary"`
+	LoginPasswordDB string `env:"LOGIN_PASSWORD_DB" env-default:"loginPassword"`
+	TextBinaryDB    string `env:"TEXT_BINARY_DB" env-default:"textBinary"`
 	HandlersTO      int    `env:"HANDLERS_TO" env-default:"500"`
 }
 
