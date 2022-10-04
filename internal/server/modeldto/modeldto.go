@@ -1,3 +1,4 @@
+// Package modeldto provides models for data transferring between the handlers and the storage.
 package modeldto
 
 type LoginPassword struct {

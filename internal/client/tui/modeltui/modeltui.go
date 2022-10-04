@@ -1,3 +1,4 @@
+// Package modeltui provides models for TUI.
 package modeltui
 
 type (

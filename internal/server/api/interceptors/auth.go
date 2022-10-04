@@ -1,3 +1,4 @@
+// Package interceptors provides various middleware functionality for GRPC.
 package interceptors
 
 import (
@@ -10,11 +11,13 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// AuthHandler defines attributes and methods of an AuthHandler instance.
 type AuthHandler struct {
 	sec cipher.Cipher
 	cfg *config.Config
 }
 
+// NewAuthHandler initializes AuthHandler instance.
 func NewAuthHandler(sec cipher.Cipher, cfg *config.Config) *AuthHandler {
 	return &AuthHandler{
 		sec: sec,
@@ -22,6 +25,7 @@ func NewAuthHandler(sec cipher.Cipher, cfg *config.Config) *AuthHandler {
 	}
 }
 
+// AuthFunc checks request context for metadata and validates metadata-derived authorization token.
 func (a *AuthHandler) AuthFunc(ctx context.Context) error {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
@@ -38,6 +42,7 @@ func (a *AuthHandler) AuthFunc(ctx context.Context) error {
 	return nil
 }
 
+// UnaryServerInterceptor returns a new unary server interceptors that performs per-request authentication.
 func (a *AuthHandler) UnaryServerInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		switch info.FullMethod {

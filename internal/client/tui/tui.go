@@ -1,3 +1,4 @@
+// Package tui provides TUI functionality.
 package tui
 
 import (
@@ -17,10 +18,12 @@ var (
 	buildCommit  = "NA"
 )
 
+// shared static attributes
+
 var flex = tview.NewFlex()
 var pages = tview.NewPages()
 
-// start screen attributes
+// start screen static attributes
 
 var header = tview.NewTextView().SetText(fmt.Sprintf("GophKeeper: build %s, date %s, commit %s", buildVersion, buildDate, buildCommit)).SetTextAlign(1)
 var footer = tview.NewTextView().SetText(fmt.Sprint("Kirill Danilov, 2022, https://github.com/danilovkiri/")).SetTextAlign(1)
@@ -48,6 +51,7 @@ var input = tview.NewFlex().SetDirection(tview.FlexRow).
 	AddItem(buttonRemove, 0, 1, false)
 var body = tview.NewFlex().AddItem(input, 0, 1, false)
 
+// App defines attributes and methods of an App instance.
 type App struct {
 	App                    *tview.Application
 	storage                storage.DataStorage
@@ -71,6 +75,7 @@ type App struct {
 	cfg                    *config.Config
 }
 
+// addRetrieveDataPieceForm defines form behavior and its contents.
 func (a *App) addRetrieveDataPieceForm() *tview.Form {
 	query := modeltui.Get{}
 	a.retrieveDataPieceForm.AddInputField("Identifier", "", 20, nil, func(id string) {
@@ -96,6 +101,7 @@ func (a *App) addRetrieveDataPieceForm() *tview.Form {
 	return a.retrieveDataPieceForm
 }
 
+// addRemovalForm defines form behavior and its contents.
 func (a *App) addRemovalForm() *tview.Form {
 	removal := modeltui.Removal{}
 	a.removeForm.AddInputField("Identifier", "", 20, nil, func(id string) {
@@ -119,6 +125,7 @@ func (a *App) addRemovalForm() *tview.Form {
 	return a.removeForm
 }
 
+// addLoginPasswordForm defines form behavior and its contents.
 func (a *App) addLoginPasswordForm() *tview.Form {
 	loginAndPassword := modeltui.LoginAndPassword{}
 	a.storeLoginPasswordForm.AddInputField("Identifier", "", 20, nil, func(id string) {
@@ -148,6 +155,7 @@ func (a *App) addLoginPasswordForm() *tview.Form {
 	return a.storeLoginPasswordForm
 }
 
+// addTextOrBinaryForm defines form behavior and its contents.
 func (a *App) addTextOrBinaryForm() *tview.Form {
 	textOrBinary := modeltui.TextOrBinary{}
 	a.storeTextOrBinaryForm.AddInputField("Identifier", "", 20, nil, func(id string) {
@@ -174,6 +182,7 @@ func (a *App) addTextOrBinaryForm() *tview.Form {
 	return a.storeTextOrBinaryForm
 }
 
+// addBankCardForm defines form behavior and its contents.
 func (a *App) addBankCardForm() *tview.Form {
 	bankCard := modeltui.BankCard{}
 	a.storeBankCardForm.AddInputField("Identifier", "", 20, nil, func(id string) {
@@ -206,6 +215,7 @@ func (a *App) addBankCardForm() *tview.Form {
 	return a.storeBankCardForm
 }
 
+// addRegisterForm defines form behavior and its contents.
 func (a *App) addRegisterForm() *tview.Form {
 	a.registerForm.AddInputField("Login", "", 20, nil, func(login string) {
 		a.registerLoginDetails.Login = login
@@ -229,6 +239,7 @@ func (a *App) addRegisterForm() *tview.Form {
 	return a.registerForm
 }
 
+// addLoginForm defines form behavior and its contents.
 func (a *App) addLoginForm() *tview.Form {
 	a.loginForm.AddInputField("Login", "", 20, nil, func(login string) {
 		a.registerLoginDetails.Login = login
@@ -252,6 +263,7 @@ func (a *App) addLoginForm() *tview.Form {
 	return a.loginForm
 }
 
+// InitTUI initializes a TUI instance and defines non-static attributes.
 func InitTUI(cancel context.CancelFunc, storage storage.DataStorage, logger *log.Logger, cfg *config.Config) App {
 	logger.Print("Attempting to initialize TUI")
 	var app = tview.NewApplication()
@@ -279,6 +291,7 @@ func InitTUI(cancel context.CancelFunc, storage storage.DataStorage, logger *log
 	return application
 }
 
+// Run starts the TUI instance, sets on-the-run behaviour.
 func (a *App) Run() {
 	defer a.cancel()
 	buttonStoreLoginPassword.SetSelectedFunc(func() {

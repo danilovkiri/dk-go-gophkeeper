@@ -1,3 +1,4 @@
+// Package grpcclient provides client-side functionality for operating with GRPC server.
 package grpcclient
 
 import (

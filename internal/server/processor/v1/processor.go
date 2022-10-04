@@ -1,3 +1,4 @@
+// Package processor provides intermediary layer functionality between the DB and handlers.
 package processor
 
 import (
@@ -10,16 +11,19 @@ import (
 	"log"
 )
 
+// check for interface compliance
 var (
 	_ processor.Processor = (*Processor)(nil)
 )
 
+// Processor defines methods and attributes of a Processor instance.
 type Processor struct {
 	storage storage.DataStorage
 	cipher  cipher.Cipher
 	logger  *log.Logger
 }
 
+// InitService initializes a Processor instance.
 func InitService(st storage.DataStorage, cp cipher.Cipher, logger *log.Logger) *Processor {
 	logger.Print("Attempting to initialize processor")
 	serviceProcessor := &Processor{
@@ -30,16 +34,13 @@ func InitService(st storage.DataStorage, cp cipher.Cipher, logger *log.Logger) *
 	return serviceProcessor
 }
 
+// GetUserID validates authorization token in a login request.
 func (proc *Processor) GetUserID(accessToken string) (string, error) {
 	userID, err := proc.cipher.ValidateToken(accessToken)
 	return userID, err
 }
 
-func (proc *Processor) GetTokenForUser(userID string) string {
-	token := proc.cipher.Encode(userID)
-	return token
-}
-
+// AddNewUser performs a registering procedure of a new user.
 func (proc *Processor) AddNewUser(ctx context.Context, login, password string) (string, error) {
 	accessToken, userID := proc.cipher.NewToken()
 	err := proc.storage.AddNewUser(ctx, proc.cipher.Encode(login), proc.cipher.Encode(password), userID)
@@ -49,6 +50,7 @@ func (proc *Processor) AddNewUser(ctx context.Context, login, password string) (
 	return accessToken, nil
 }
 
+// LoginUser performs a login procedure of an existing user.
 func (proc *Processor) LoginUser(ctx context.Context, login, password string) (string, error) {
 	userID, err := proc.storage.CheckUser(ctx, proc.cipher.Encode(login), proc.cipher.Encode(password))
 	if err != nil {
@@ -58,6 +60,7 @@ func (proc *Processor) LoginUser(ctx context.Context, login, password string) (s
 	return accessToken, nil
 }
 
+// GetBankCardData performs a retrieval of all bank card entries and their decoding.
 func (proc *Processor) GetBankCardData(ctx context.Context, userID string) ([]modeldto.BankCard, error) {
 	bankCards, err := proc.storage.GetBankCardData(ctx, userID)
 	if err != nil {
@@ -97,6 +100,7 @@ func (proc *Processor) GetBankCardData(ctx context.Context, userID string) ([]mo
 	return responseBankCards, nil
 }
 
+// GetLoginPasswordData performs a retrieval of all login/password entries and their decoding.
 func (proc *Processor) GetLoginPasswordData(ctx context.Context, userID string) ([]modeldto.LoginPassword, error) {
 	loginsPasswords, err := proc.storage.GetLoginPasswordData(ctx, userID)
 	if err != nil {
@@ -131,6 +135,7 @@ func (proc *Processor) GetLoginPasswordData(ctx context.Context, userID string) 
 	return responseLoginsPasswords, nil
 }
 
+// GetTextBinaryData performs a retrieval of all text/binary entries and their decoding.
 func (proc *Processor) GetTextBinaryData(ctx context.Context, userID string) ([]modeldto.TextBinary, error) {
 	textsBinaries, err := proc.storage.GetTextBinaryData(ctx, userID)
 	if err != nil {
@@ -160,6 +165,7 @@ func (proc *Processor) GetTextBinaryData(ctx context.Context, userID string) ([]
 	return responseTextsBinaries, nil
 }
 
+// SetBankCardData performs an encoding of a bank card entry and sends it to storage.
 func (proc *Processor) SetBankCardData(ctx context.Context, userID, identifier, number, holder, cvv, meta string) error {
 	encodedIndentifier := proc.cipher.Encode(identifier)
 	encodedNumber := proc.cipher.Encode(number)
@@ -170,6 +176,7 @@ func (proc *Processor) SetBankCardData(ctx context.Context, userID, identifier, 
 	return err
 }
 
+// SetLoginPasswordData performs an encoding of a login/password entry and sends it to storage.
 func (proc *Processor) SetLoginPasswordData(ctx context.Context, userID, identifier, login, password, meta string) error {
 	encodedIndentifier := proc.cipher.Encode(identifier)
 	encodedLogin := proc.cipher.Encode(login)
@@ -179,6 +186,7 @@ func (proc *Processor) SetLoginPasswordData(ctx context.Context, userID, identif
 	return err
 }
 
+// SetTextBinaryData performs an encoding of a text/binary entry and sends it to storage.
 func (proc *Processor) SetTextBinaryData(ctx context.Context, userID, identifier, entry, meta string) error {
 	encodedIndentifier := proc.cipher.Encode(identifier)
 	encodedEntry := proc.cipher.Encode(entry)
@@ -187,6 +195,7 @@ func (proc *Processor) SetTextBinaryData(ctx context.Context, userID, identifier
 	return err
 }
 
+// Delete performs a removal procedure of a data piece.
 func (proc *Processor) Delete(userID, identifier, db string) {
 	encodedIndentifier := proc.cipher.Encode(identifier)
 	item := modelstorage.Removal{

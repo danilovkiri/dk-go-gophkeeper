@@ -1,3 +1,4 @@
+// Package inmemory provides local client data storing functionality.
 package inmemory
 
 import (
@@ -10,10 +11,12 @@ import (
 	"log"
 )
 
+// check for interface compliance
 var (
 	_ storage.DataStorage = (*Storage)(nil)
 )
 
+// Storage defines atrributes and methods of a Storage instance.
 type Storage struct {
 	bankCardDB      map[string]modelstorage.BankCard
 	loginPasswordDB map[string]modelstorage.LoginAndPassword
@@ -22,6 +25,7 @@ type Storage struct {
 	logger          *log.Logger
 }
 
+// InitStorage initializes a Storage instance.
 func InitStorage(logger *log.Logger, client grpcclient.GRPCClient) *Storage {
 	logger.Print("Attempting to initialize storage")
 	bankCardDB := make(map[string]modelstorage.BankCard)
@@ -37,6 +41,7 @@ func InitStorage(logger *log.Logger, client grpcclient.GRPCClient) *Storage {
 	return &st
 }
 
+// Remove deletes data from local storage and sends delete requests to the server.
 func (s *Storage) Remove(identifier, db string) error {
 	var err error
 	switch db {
@@ -44,10 +49,10 @@ func (s *Storage) Remove(identifier, db string) error {
 		_, ok := s.bankCardDB[identifier]
 		if ok {
 			s.logger.Print("Removing entry from bank card storage:", identifier)
-			_, err := s.clientGRPC.RemoveBankCard(identifier)
-			if err != nil {
-				s.logger.Print("Could not remove bank card entry:", err.Error())
-				return err
+			_, err_ := s.clientGRPC.RemoveBankCard(identifier)
+			if err_ != nil {
+				s.logger.Print("Could not remove bank card entry:", err_.Error())
+				return err_
 			}
 			delete(s.bankCardDB, identifier)
 		} else {
@@ -57,10 +62,10 @@ func (s *Storage) Remove(identifier, db string) error {
 		_, ok := s.loginPasswordDB[identifier]
 		if ok {
 			s.logger.Print("Removing entry from login/password storage:", identifier)
-			_, err := s.clientGRPC.RemoveLoginPassword(identifier)
-			if err != nil {
-				s.logger.Print("Could not remove login/password entry:", err.Error())
-				return err
+			_, err_ := s.clientGRPC.RemoveLoginPassword(identifier)
+			if err_ != nil {
+				s.logger.Print("Could not remove login/password entry:", err_.Error())
+				return err_
 			}
 			delete(s.loginPasswordDB, identifier)
 		} else {
@@ -70,10 +75,10 @@ func (s *Storage) Remove(identifier, db string) error {
 		_, ok := s.textBinaryDB[identifier]
 		if ok {
 			s.logger.Print("Removing entry from text/binary storage:", identifier)
-			_, err := s.clientGRPC.RemoveTextBinary(identifier)
-			if err != nil {
-				s.logger.Print("Could not remove text/binary entry:", err.Error())
-				return err
+			_, err_ := s.clientGRPC.RemoveTextBinary(identifier)
+			if err_ != nil {
+				s.logger.Print("Could not remove text/binary entry:", err_.Error())
+				return err_
 			}
 			delete(s.textBinaryDB, identifier)
 		} else {
@@ -85,6 +90,7 @@ func (s *Storage) Remove(identifier, db string) error {
 	return err
 }
 
+// Login sends a login request to the server and cleans local DB upon successful response.
 func (s *Storage) Login(login, password string) error {
 	newLoginRegisterEntry := modelstorage.RegisterLogin{
 		Login:    login,
@@ -99,6 +105,7 @@ func (s *Storage) Login(login, password string) error {
 	return nil
 }
 
+// Register sends a register request to the server and cleans local DB upon successful response.
 func (s *Storage) Register(login, password string) error {
 	newLoginRegisterEntry := modelstorage.RegisterLogin{
 		Login:    login,
@@ -113,6 +120,7 @@ func (s *Storage) Register(login, password string) error {
 	return nil
 }
 
+// AddBankCard adds a new bank card entry to the local client storage and sends it to the server.
 func (s *Storage) AddBankCard(identifier, number, holder, cvv, meta string) error {
 	newBankCardEntry := modelstorage.BankCard{
 		Identifier: identifier,
@@ -137,6 +145,7 @@ func (s *Storage) AddBankCard(identifier, number, holder, cvv, meta string) erro
 	return nil
 }
 
+// AddLoginPassword adds a new login/password entry to the local client storage and sends it to the server.
 func (s *Storage) AddLoginPassword(identifier, login, password, meta string) error {
 	newLoginPasswordEntry := modelstorage.LoginAndPassword{
 		Identifier: identifier,
@@ -160,6 +169,7 @@ func (s *Storage) AddLoginPassword(identifier, login, password, meta string) err
 	return nil
 }
 
+// AddTextBinary adds a new text/binary entry to the local client storage and sends it to the server.
 func (s *Storage) AddTextBinary(identifier, entry, meta string) error {
 	newTextBinaryEntry := modelstorage.TextOrBinary{
 		Identifier: identifier,
@@ -182,6 +192,7 @@ func (s *Storage) AddTextBinary(identifier, entry, meta string) error {
 	return nil
 }
 
+// Sync performs retrieval of all data from server overwriting local storage.
 func (s *Storage) Sync() error {
 	s.logger.Print("Attempting sync")
 	grp, _ := errgroup.WithContext(context.Background())
@@ -196,6 +207,7 @@ func (s *Storage) Sync() error {
 	return nil
 }
 
+// dumpBankCards retrieves bank card entries from server.
 func (s *Storage) dumpBankCards() error {
 	cloudDataBankCards, _, err := s.clientGRPC.GetBankCards()
 	if err != nil {
@@ -208,6 +220,7 @@ func (s *Storage) dumpBankCards() error {
 	return nil
 }
 
+// dumpLoginsPasswords retrieves login/password entries from server.
 func (s *Storage) dumpLoginsPasswords() error {
 	cloudDataLoginsPasswords, _, err := s.clientGRPC.GetLoginsPasswords()
 	if err != nil {
@@ -220,6 +233,7 @@ func (s *Storage) dumpLoginsPasswords() error {
 	return nil
 }
 
+// dumpTextsBinaries retrieves text/binary entries from server.
 func (s *Storage) dumpTextsBinaries() error {
 	cloudDataTextsBinaries, _, err := s.clientGRPC.GetTextsBinaries()
 	if err != nil {
@@ -232,6 +246,7 @@ func (s *Storage) dumpTextsBinaries() error {
 	return nil
 }
 
+// Get retrieves a data piece from local storage.
 func (s *Storage) Get(identifier, db string) (string, error) {
 	var err error
 	var data string
@@ -263,6 +278,7 @@ func (s *Storage) Get(identifier, db string) (string, error) {
 	return data, err
 }
 
+// CleanDB re-initializes a local DB.
 func (s *Storage) CleanDB() {
 	bankCardDB := make(map[string]modelstorage.BankCard)
 	loginPasswordDB := make(map[string]modelstorage.LoginAndPassword)

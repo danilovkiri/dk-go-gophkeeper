@@ -1,3 +1,4 @@
+// Package modelstorage provides models for local client data storage.
 package modelstorage
 
 type (

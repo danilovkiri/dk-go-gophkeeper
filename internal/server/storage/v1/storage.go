@@ -1,3 +1,4 @@
+// Package storage provides server-side data storage functionality.
 package storage
 
 import (
@@ -19,10 +20,12 @@ import (
 	"time"
 )
 
+// check for interface compliance
 var (
 	_ storage.DataStorage = (*Storage)(nil)
 )
 
+// Storage defines methods and attributes of a Storage instance.
 type Storage struct {
 	mu     sync.Mutex
 	cfg    *config.Config
@@ -31,6 +34,7 @@ type Storage struct {
 	ch     chan modelstorage.Removal
 }
 
+// InitStorage initalizes a Storage instance, sets a listener for its closure and asynchronous data removal.
 func InitStorage(ctx context.Context, logger *log.Logger, cfg *config.Config, wg *sync.WaitGroup) *Storage {
 	logger.Print("Attempting to initialize storage")
 	db, err := sql.Open("pgx", cfg.DatabaseDSN)
@@ -103,9 +107,15 @@ func InitStorage(ctx context.Context, logger *log.Logger, cfg *config.Config, wg
 	return &st
 }
 
+// GetBankCardData retrieves all bank card entries from storage.
 func (s *Storage) GetBankCardData(ctx context.Context, userID string) ([]modelstorage.BankCardStorageEntry, error) {
 	selectStmt, err := s.DB.PrepareContext(ctx, "SELECT * FROM bank_cards WHERE user_id = $1")
-	defer selectStmt.Close()
+	defer func(selectStmt *sql.Stmt) {
+		err_ := selectStmt.Close()
+		if err_ != nil {
+			return
+		}
+	}(selectStmt)
 	if err != nil {
 		return nil, &storageErrors.StatementPSQLError{Err: err}
 	}
@@ -149,9 +159,15 @@ func (s *Storage) GetBankCardData(ctx context.Context, userID string) ([]modelst
 	}
 }
 
+// GetLoginPasswordData retrieves all login/password entries from storage.
 func (s *Storage) GetLoginPasswordData(ctx context.Context, userID string) ([]modelstorage.LoginPasswordStorageEntry, error) {
 	selectStmt, err := s.DB.PrepareContext(ctx, "SELECT * FROM logins_passwords WHERE user_id = $1")
-	defer selectStmt.Close()
+	defer func(selectStmt *sql.Stmt) {
+		err_ := selectStmt.Close()
+		if err_ != nil {
+			return
+		}
+	}(selectStmt)
 	if err != nil {
 		return nil, &storageErrors.StatementPSQLError{Err: err}
 	}
@@ -195,9 +211,15 @@ func (s *Storage) GetLoginPasswordData(ctx context.Context, userID string) ([]mo
 	}
 }
 
+// GetTextBinaryData retrieves all text/binary entries from storage.
 func (s *Storage) GetTextBinaryData(ctx context.Context, userID string) ([]modelstorage.TextBinaryStorageEntry, error) {
 	selectStmt, err := s.DB.PrepareContext(ctx, "SELECT * FROM texts_binaries WHERE user_id = $1")
-	defer selectStmt.Close()
+	defer func(selectStmt *sql.Stmt) {
+		err_ := selectStmt.Close()
+		if err_ != nil {
+			return
+		}
+	}(selectStmt)
 	if err != nil {
 		return nil, &storageErrors.StatementPSQLError{Err: err}
 	}
@@ -241,6 +263,7 @@ func (s *Storage) GetTextBinaryData(ctx context.Context, userID string) ([]model
 	}
 }
 
+// SetBankCardData adds a new bank card entry to storage.
 func (s *Storage) SetBankCardData(ctx context.Context, userID, identifier, number, holder, cvv, meta string) error {
 	selectStmt, err := s.DB.PrepareContext(ctx, "SELECT * FROM bank_cards WHERE user_id = $1 AND identifier = $2")
 	if err != nil {
@@ -286,6 +309,7 @@ func (s *Storage) SetBankCardData(ctx context.Context, userID, identifier, numbe
 	}
 }
 
+// SetLoginPasswordData adds a new login/password entry to storage.
 func (s *Storage) SetLoginPasswordData(ctx context.Context, userID, identifier, login, password, meta string) error {
 	selectStmt, err := s.DB.PrepareContext(ctx, "SELECT * FROM logins_passwords WHERE user_id = $1 AND identifier = $2")
 	if err != nil {
@@ -331,6 +355,7 @@ func (s *Storage) SetLoginPasswordData(ctx context.Context, userID, identifier, 
 	}
 }
 
+// SetTextBinaryData adds a new text/binary entry to storage.
 func (s *Storage) SetTextBinaryData(ctx context.Context, userID, identifier, entry, meta string) error {
 	selectStmt, err := s.DB.PrepareContext(ctx, "SELECT * FROM texts_binaries WHERE user_id = $1 AND identifier = $2")
 	if err != nil {
@@ -376,6 +401,7 @@ func (s *Storage) SetTextBinaryData(ctx context.Context, userID, identifier, ent
 	}
 }
 
+// AddNewUser performs a registering procedure of a new user.
 func (s *Storage) AddNewUser(ctx context.Context, login, password, userID string) error {
 	newUserStmt, err := s.DB.PrepareContext(ctx, "INSERT INTO users (user_id, login, password, registered_at) VALUES ($1, $2, $3, $4)")
 	if err != nil {
@@ -412,9 +438,15 @@ func (s *Storage) AddNewUser(ctx context.Context, login, password, userID string
 	}
 }
 
+// CheckUser performs a login procedure of an existing user.
 func (s *Storage) CheckUser(ctx context.Context, login, password string) (string, error) {
 	selectStmt, err := s.DB.PrepareContext(ctx, "SELECT * FROM users WHERE login = $1")
-	defer selectStmt.Close()
+	defer func(selectStmt *sql.Stmt) {
+		err_ := selectStmt.Close()
+		if err_ != nil {
+			return
+		}
+	}(selectStmt)
 	if err != nil {
 		return "", &storageErrors.StatementPSQLError{Err: err}
 	}
@@ -456,10 +488,12 @@ func (s *Storage) CheckUser(ctx context.Context, login, password string) (string
 	}
 }
 
+// SendToQueue adds items to the removal queue.
 func (s *Storage) SendToQueue(item modelstorage.Removal) {
 	s.ch <- item
 }
 
+// DeleteBatch performs batch deletion of data.
 func (s *Storage) DeleteBatch(ctx context.Context, identifiers []string, userID, db string) error {
 	var deleteStmt *sql.Stmt
 	var err error
@@ -514,6 +548,7 @@ func (s *Storage) DeleteBatch(ctx context.Context, identifiers []string, userID,
 	}
 }
 
+// Flush performs batch deletion of data from the removal queue.
 func (s *Storage) Flush(ctx context.Context, batch []modelstorage.Removal) error {
 	uniqueMapBankCards := make(map[string][]string)
 	uniqueMapLoginsPasswords := make(map[string][]string)
@@ -561,6 +596,7 @@ func (s *Storage) Flush(ctx context.Context, batch []modelstorage.Removal) error
 	return nil
 }
 
+// createTables created necessary tables if the PSQL DB if the do not exist.
 func (s *Storage) createTables(ctx context.Context) error {
 	var queries []string
 	query := `CREATE TABLE IF NOT EXISTS users (

@@ -1,3 +1,4 @@
+// Package cipher provides data ciphering functionality.
 package cipher
 
 import (
@@ -11,10 +12,12 @@ import (
 	"log"
 )
 
+// check for interface compliance.
 var (
 	_ procCipher.Cipher = (*Cipher)(nil)
 )
 
+// Cipher defines attributes and methods of a Cipher instance.
 type Cipher struct {
 	aesgcm cipher.AEAD
 	nonce  []byte
@@ -22,6 +25,7 @@ type Cipher struct {
 	logger *log.Logger
 }
 
+// NewCipherService initializes a Cipher instance.
 func NewCipherService(cfg *config.Config, logger *log.Logger) (*Cipher, error) {
 	logger.Print("Attempting to initialize cipher")
 	key := sha256.Sum256([]byte(cfg.UserKey))
@@ -42,11 +46,13 @@ func NewCipherService(cfg *config.Config, logger *log.Logger) (*Cipher, error) {
 	}, nil
 }
 
+// Encode performs ciphering data.
 func (s *Cipher) Encode(data string) string {
 	encoded := s.aesgcm.Seal(nil, s.nonce, []byte(data), nil)
 	return hex.EncodeToString(encoded)
 }
 
+// Decode performs deciphering data.
 func (s *Cipher) Decode(msg string) (string, error) {
 	msgBytes, err := hex.DecodeString(msg)
 	if err != nil {
@@ -59,12 +65,14 @@ func (s *Cipher) Decode(msg string) (string, error) {
 	return string(decoded), nil
 }
 
+// NewToken creates a new pair of user ID and its corresponding ciphered token.
 func (s *Cipher) NewToken() (string, string) {
 	userID := uuid.New().String()
 	token := s.Encode(userID)
 	return token, userID
 }
 
+// ValidateToken validates ciphered token and returns its corresponding user ID.
 func (s *Cipher) ValidateToken(token string) (string, error) {
 	userID, err := s.Decode(token)
 	if err != nil {

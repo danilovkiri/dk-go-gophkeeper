@@ -1,3 +1,4 @@
+// Package storage provides local client data storing functionality.
 package storage
 
 // BankCardAdder defines a set of methods for types implementing BankCardAdder.

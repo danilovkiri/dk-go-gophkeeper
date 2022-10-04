@@ -1,3 +1,4 @@
+// Package client provides client-side functionality for operating with GRPC server.
 package client
 
 import (
@@ -16,10 +17,12 @@ import (
 	"sync"
 )
 
+// check for interface compliance
 var (
 	_ grpcclient.GRPCClient = (*GRPCClient)(nil)
 )
 
+// GRPCClient defines attributes and methods of a GRPCClient instance.
 type GRPCClient struct {
 	token  string
 	md     metadata.MD
@@ -30,6 +33,7 @@ type GRPCClient struct {
 	cfg    *config.Config
 }
 
+// InitGRPCClient initializes GRPCClient instance and listens for context cancellation to close it.
 func InitGRPCClient(ctx context.Context, logger *log.Logger, wg *sync.WaitGroup, cfg *config.Config) *GRPCClient {
 	logger.Printf("Attempting to initialize GRPC client at %s", cfg.ServerAddress)
 	conn, err := grpc.Dial(cfg.ServerAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -60,6 +64,7 @@ func InitGRPCClient(ctx context.Context, logger *log.Logger, wg *sync.WaitGroup,
 	return &client
 }
 
+// Login implements client-side login functionality.
 func (c *GRPCClient) Login(credentials modelstorage.RegisterLogin) (codes.Code, error) {
 	c.logger.Print("Login attempt received")
 	var header, trailer metadata.MD
@@ -79,6 +84,7 @@ func (c *GRPCClient) Login(credentials modelstorage.RegisterLogin) (codes.Code, 
 	return e.Code(), nil
 }
 
+// Register implements client-side register functionality.
 func (c *GRPCClient) Register(credentials modelstorage.RegisterLogin) (codes.Code, error) {
 	c.logger.Print("Register attempt received")
 	var header, trailer metadata.MD
@@ -98,6 +104,7 @@ func (c *GRPCClient) Register(credentials modelstorage.RegisterLogin) (codes.Cod
 	return e.Code(), nil
 }
 
+// GetTextsBinaries implements client-side retrieval of texts/binaries from server and storing them in client storage.
 func (c *GRPCClient) GetTextsBinaries() (map[string]modelstorage.TextOrBinary, codes.Code, error) {
 	c.logger.Print("Getting texts/binaries attempt received")
 	newCtx := metadata.NewOutgoingContext(c.ctx, c.md)
@@ -123,6 +130,7 @@ func (c *GRPCClient) GetTextsBinaries() (map[string]modelstorage.TextOrBinary, c
 	return result, e.Code(), nil
 }
 
+// GetLoginsPasswords implements client-side retrieval of logins/passwords from server and storing them in client storage.
 func (c *GRPCClient) GetLoginsPasswords() (map[string]modelstorage.LoginAndPassword, codes.Code, error) {
 	c.logger.Print("Getting logins/passwords attempt received")
 	newCtx := metadata.NewOutgoingContext(c.ctx, c.md)
@@ -149,6 +157,7 @@ func (c *GRPCClient) GetLoginsPasswords() (map[string]modelstorage.LoginAndPassw
 	return result, e.Code(), nil
 }
 
+// GetBankCards implements client-side retrieval of bank cards from server and storing them in client storage.
 func (c *GRPCClient) GetBankCards() (map[string]modelstorage.BankCard, codes.Code, error) {
 	c.logger.Print("Getting bank cards attempt received")
 	newCtx := metadata.NewOutgoingContext(c.ctx, c.md)
@@ -176,6 +185,7 @@ func (c *GRPCClient) GetBankCards() (map[string]modelstorage.BankCard, codes.Cod
 	return result, e.Code(), nil
 }
 
+// SendBankCard implements client-side sending of bank card entry to server and client storage.
 func (c *GRPCClient) SendBankCard(bankCard modelstorage.BankCard) (codes.Code, error) {
 	c.logger.Print("Sending bank card attempt received")
 	newCtx := metadata.NewOutgoingContext(c.ctx, c.md)
@@ -191,6 +201,7 @@ func (c *GRPCClient) SendBankCard(bankCard modelstorage.BankCard) (codes.Code, e
 	return e.Code(), nil
 }
 
+// SendLoginPassword implements client-side sending of login/password entry to server and client storage.
 func (c *GRPCClient) SendLoginPassword(loginPassword modelstorage.LoginAndPassword) (codes.Code, error) {
 	c.logger.Print("Sending login/password attempt received")
 	newCtx := metadata.NewOutgoingContext(c.ctx, c.md)
@@ -206,6 +217,7 @@ func (c *GRPCClient) SendLoginPassword(loginPassword modelstorage.LoginAndPasswo
 	return e.Code(), nil
 }
 
+// SendTextBinary implements client-side sending of text/binary entry to server and client storage.
 func (c *GRPCClient) SendTextBinary(textBinary modelstorage.TextOrBinary) (codes.Code, error) {
 	c.logger.Print("Sending text/binary attempt received")
 	newCtx := metadata.NewOutgoingContext(c.ctx, c.md)
@@ -221,6 +233,7 @@ func (c *GRPCClient) SendTextBinary(textBinary modelstorage.TextOrBinary) (codes
 	return e.Code(), nil
 }
 
+// RemoveBankCard implements client-side removal of bank card entry from server and client storage.
 func (c *GRPCClient) RemoveBankCard(identifier string) (codes.Code, error) {
 	c.logger.Print("Removing bank card attempt received")
 	newCtx := metadata.NewOutgoingContext(c.ctx, c.md)
@@ -236,6 +249,7 @@ func (c *GRPCClient) RemoveBankCard(identifier string) (codes.Code, error) {
 	return e.Code(), nil
 }
 
+// RemoveLoginPassword implements client-side removal of login/password entry from server and client storage.
 func (c *GRPCClient) RemoveLoginPassword(identifier string) (codes.Code, error) {
 	c.logger.Print("Removing login/password attempt received")
 	newCtx := metadata.NewOutgoingContext(c.ctx, c.md)
@@ -251,6 +265,7 @@ func (c *GRPCClient) RemoveLoginPassword(identifier string) (codes.Code, error) 
 	return e.Code(), nil
 }
 
+// RemoveTextBinary implements client-side removal of text/binary entry from server and client storage.
 func (c *GRPCClient) RemoveTextBinary(identifier string) (codes.Code, error) {
 	c.logger.Print("Removing text/binary attempt received")
 	newCtx := metadata.NewOutgoingContext(c.ctx, c.md)
