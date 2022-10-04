@@ -58,8 +58,8 @@ func (proc *Processor) LoginUser(ctx context.Context, login, password string) (s
 	return accessToken, nil
 }
 
-func (proc *Processor) GetBankCardData(ctx context.Context, userID, identifier string) ([]modeldto.BankCard, error) {
-	bankCards, err := proc.storage.GetBankCardData(ctx, userID, proc.cipher.Encode(identifier))
+func (proc *Processor) GetBankCardData(ctx context.Context, userID string) ([]modeldto.BankCard, error) {
+	bankCards, err := proc.storage.GetBankCardData(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -97,8 +97,8 @@ func (proc *Processor) GetBankCardData(ctx context.Context, userID, identifier s
 	return responseBankCards, nil
 }
 
-func (proc *Processor) GetLoginPasswordData(ctx context.Context, userID, identifier string) ([]modeldto.LoginPassword, error) {
-	loginsPasswords, err := proc.storage.GetLoginPasswordData(ctx, userID, proc.cipher.Encode(identifier))
+func (proc *Processor) GetLoginPasswordData(ctx context.Context, userID string) ([]modeldto.LoginPassword, error) {
+	loginsPasswords, err := proc.storage.GetLoginPasswordData(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -131,8 +131,8 @@ func (proc *Processor) GetLoginPasswordData(ctx context.Context, userID, identif
 	return responseLoginsPasswords, nil
 }
 
-func (proc *Processor) GetTextBinaryData(ctx context.Context, userID, identifier string) ([]modeldto.TextBinary, error) {
-	textsBinaries, err := proc.storage.GetTextBinaryData(ctx, userID, proc.cipher.Encode(identifier))
+func (proc *Processor) GetTextBinaryData(ctx context.Context, userID string) ([]modeldto.TextBinary, error) {
+	textsBinaries, err := proc.storage.GetTextBinaryData(ctx, userID)
 	if err != nil {
 		return nil, err
 	}

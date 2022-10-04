@@ -5,6 +5,7 @@ import (
 	"dk-go-gophkeeper/internal/client/grpcclient"
 	"dk-go-gophkeeper/internal/client/storage"
 	"dk-go-gophkeeper/internal/client/tui/modeltui"
+	"dk-go-gophkeeper/internal/config"
 	"fmt"
 	"github.com/rivo/tview"
 	"log"
@@ -67,6 +68,7 @@ type App struct {
 	result                 *tview.TextView
 	logger                 *log.Logger
 	clientGRPC             grpcclient.GRPCClient
+	cfg                    *config.Config
 }
 
 func (a *App) addRetrieveDataPieceForm() *tview.Form {
@@ -74,7 +76,7 @@ func (a *App) addRetrieveDataPieceForm() *tview.Form {
 	a.retrieveDataPieceForm.AddInputField("Identifier", "", 20, nil, func(id string) {
 		query.Identifier = id
 	})
-	a.retrieveDataPieceForm.AddDropDown("DB type", []string{"bankCard", "loginPassword", "textBinary"}, 0, func(db string, idx int) {
+	a.retrieveDataPieceForm.AddDropDown("DB type", []string{a.cfg.BankCardDB, a.cfg.LoginPasswordDB, a.cfg.TextBinaryDB}, 0, func(db string, idx int) {
 		query.Db = db
 	})
 	a.retrieveDataPieceForm.AddButton("Get", func() {
@@ -99,7 +101,7 @@ func (a *App) addRemovalForm() *tview.Form {
 	a.removeForm.AddInputField("Identifier", "", 20, nil, func(id string) {
 		removal.Identifier = id
 	})
-	a.removeForm.AddDropDown("DB type", []string{"bankCard", "loginPassword", "textBinary"}, 0, func(db string, idx int) {
+	a.removeForm.AddDropDown("DB type", []string{a.cfg.BankCardDB, a.cfg.LoginPasswordDB, a.cfg.TextBinaryDB}, 0, func(db string, idx int) {
 		removal.Db = db
 	})
 	a.removeForm.AddButton("Execute", func() {
@@ -216,7 +218,7 @@ func (a *App) addRegisterForm() *tview.Form {
 		if err != nil {
 			a.operationStatus.SetText(err.Error())
 		} else {
-			a.operationStatus.SetText("Login/Register: OK")
+			a.operationStatus.SetText("Register: OK")
 			a.loginStatus.SetText(fmt.Sprintf("Logged in as: %s", a.registerLoginDetails.Login))
 		}
 		pages.SwitchToPage("menu")
@@ -239,7 +241,7 @@ func (a *App) addLoginForm() *tview.Form {
 		if err != nil {
 			a.operationStatus.SetText(err.Error())
 		} else {
-			a.operationStatus.SetText("Login/Register: OK")
+			a.operationStatus.SetText("Login: OK")
 			a.loginStatus.SetText(fmt.Sprintf("Logged in as: %s", a.registerLoginDetails.Login))
 		}
 		pages.SwitchToPage("menu")
@@ -250,7 +252,7 @@ func (a *App) addLoginForm() *tview.Form {
 	return a.loginForm
 }
 
-func InitTUI(cancel context.CancelFunc, storage storage.DataStorage, logger *log.Logger) App {
+func InitTUI(cancel context.CancelFunc, storage storage.DataStorage, logger *log.Logger, cfg *config.Config) App {
 	logger.Print("Attempting to initialize TUI")
 	var app = tview.NewApplication()
 	application := App{
@@ -272,6 +274,7 @@ func InitTUI(cancel context.CancelFunc, storage storage.DataStorage, logger *log
 		operationStatus:        tview.NewTextView().SetText("Nothing to report yet").SetTextAlign(1).SetScrollable(true),
 		result:                 tview.NewTextView().SetText("Nothing was requested yet").SetTextAlign(1).SetScrollable(true),
 		logger:                 logger,
+		cfg:                    cfg,
 	}
 	return application
 }

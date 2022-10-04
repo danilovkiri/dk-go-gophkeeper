@@ -9,10 +9,14 @@ import (
 
 // Config handles all constants and parameters.
 type Config struct {
-	ServerAddress  string `json:"server_address" env:"SERVER_ADDRESS"`
-	DatabaseDSN    string `json:"database_dsn" env:"DATABASE_DSN"`
-	UserKey        string `env:"USER_KEY" env-default:"jds__63h3_7ds"`
-	AuthBearerName string `env:"BEARER_KEY" env-default:"token"`
+	ServerAddress   string `json:"server_address" env:"SERVER_ADDRESS"`
+	DatabaseDSN     string `json:"database_dsn" env:"DATABASE_DSN"`
+	UserKey         string `env:"USER_KEY" env-default:"jds__63h3_7ds"`
+	AuthBearerName  string `env:"BEARER_KEY" env-default:"token"`
+	BankCardDB      string `env:"BANK_CARD_DB" env-default:"bankCard"`
+	LoginPasswordDB string `env:"BANK_CARD_DB" env-default:"loginPassword"`
+	TextBinaryDB    string `env:"BANK_CARD_DB" env-default:"textBinary"`
+	HandlersTO      int    `env:"HANDLERS_TO" env-default:"500"`
 }
 
 // NewDefaultConfiguration initializes a configuration struct.

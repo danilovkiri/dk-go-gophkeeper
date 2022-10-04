@@ -103,9 +103,8 @@ func InitStorage(ctx context.Context, logger *log.Logger, cfg *config.Config, wg
 	return &st
 }
 
-func (s *Storage) GetBankCardData(ctx context.Context, userID, identifier string) ([]modelstorage.BankCardStorageEntry, error) {
-	// prepare SELECT statement
-	selectStmt, err := s.DB.PrepareContext(ctx, "SELECT * FROM logins_passwords WHERE user_id = $1 AND identifier = $2")
+func (s *Storage) GetBankCardData(ctx context.Context, userID string) ([]modelstorage.BankCardStorageEntry, error) {
+	selectStmt, err := s.DB.PrepareContext(ctx, "SELECT * FROM logins_passwords WHERE user_id = $1")
 	defer selectStmt.Close()
 	if err != nil {
 		return nil, &storageErrors.StatementPSQLError{Err: err}
@@ -115,7 +114,7 @@ func (s *Storage) GetBankCardData(ctx context.Context, userID, identifier string
 	go func() {
 		s.mu.Lock()
 		defer s.mu.Unlock()
-		rows, err := selectStmt.QueryContext(ctx, userID, identifier)
+		rows, err := selectStmt.QueryContext(ctx, userID)
 		if err != nil {
 			chanEr <- &storageErrors.ExecutionPSQLError{Err: err}
 			return
@@ -139,10 +138,10 @@ func (s *Storage) GetBankCardData(ctx context.Context, userID, identifier string
 	}()
 	select {
 	case <-ctx.Done():
-		s.logger.Print("getting bank card failed")
+		s.logger.Print("getting bank card failed due to context timeout")
 		return nil, &storageErrors.ContextTimeoutExceededError{Err: ctx.Err()}
 	case methodErr := <-chanEr:
-		s.logger.Print("getting bank card failed")
+		s.logger.Print("getting bank card failed due to storage error")
 		return nil, methodErr
 	case query := <-chanOk:
 		s.logger.Print("getting bank card done")
@@ -150,9 +149,8 @@ func (s *Storage) GetBankCardData(ctx context.Context, userID, identifier string
 	}
 }
 
-func (s *Storage) GetLoginPasswordData(ctx context.Context, userID, identifier string) ([]modelstorage.LoginPasswordStorageEntry, error) {
-	// prepare SELECT statement
-	selectStmt, err := s.DB.PrepareContext(ctx, "SELECT * FROM logins_passwords WHERE user_id = $1 AND identifier = $2")
+func (s *Storage) GetLoginPasswordData(ctx context.Context, userID string) ([]modelstorage.LoginPasswordStorageEntry, error) {
+	selectStmt, err := s.DB.PrepareContext(ctx, "SELECT * FROM logins_passwords WHERE user_id = $1")
 	defer selectStmt.Close()
 	if err != nil {
 		return nil, &storageErrors.StatementPSQLError{Err: err}
@@ -162,7 +160,7 @@ func (s *Storage) GetLoginPasswordData(ctx context.Context, userID, identifier s
 	go func() {
 		s.mu.Lock()
 		defer s.mu.Unlock()
-		rows, err := selectStmt.QueryContext(ctx, userID, identifier)
+		rows, err := selectStmt.QueryContext(ctx, userID)
 		if err != nil {
 			chanEr <- &storageErrors.ExecutionPSQLError{Err: err}
 			return
@@ -186,10 +184,10 @@ func (s *Storage) GetLoginPasswordData(ctx context.Context, userID, identifier s
 	}()
 	select {
 	case <-ctx.Done():
-		s.logger.Print("getting login/password failed")
+		s.logger.Print("getting login/password failed due to context timeout")
 		return nil, &storageErrors.ContextTimeoutExceededError{Err: ctx.Err()}
 	case methodErr := <-chanEr:
-		s.logger.Print("getting login/password failed")
+		s.logger.Print("getting login/password failed due to storage error")
 		return nil, methodErr
 	case query := <-chanOk:
 		s.logger.Print("getting login/password done")
@@ -197,9 +195,8 @@ func (s *Storage) GetLoginPasswordData(ctx context.Context, userID, identifier s
 	}
 }
 
-func (s *Storage) GetTextBinaryData(ctx context.Context, userID, identifier string) ([]modelstorage.TextBinaryStorageEntry, error) {
-	// prepare SELECT statement
-	selectStmt, err := s.DB.PrepareContext(ctx, "SELECT * FROM texts_binaries WHERE user_id = $1 AND identifier = $2")
+func (s *Storage) GetTextBinaryData(ctx context.Context, userID string) ([]modelstorage.TextBinaryStorageEntry, error) {
+	selectStmt, err := s.DB.PrepareContext(ctx, "SELECT * FROM texts_binaries WHERE user_id = $1")
 	defer selectStmt.Close()
 	if err != nil {
 		return nil, &storageErrors.StatementPSQLError{Err: err}
@@ -209,7 +206,7 @@ func (s *Storage) GetTextBinaryData(ctx context.Context, userID, identifier stri
 	go func() {
 		s.mu.Lock()
 		defer s.mu.Unlock()
-		rows, err := selectStmt.QueryContext(ctx, userID, identifier)
+		rows, err := selectStmt.QueryContext(ctx, userID)
 		if err != nil {
 			chanEr <- &storageErrors.ExecutionPSQLError{Err: err}
 			return
@@ -233,10 +230,10 @@ func (s *Storage) GetTextBinaryData(ctx context.Context, userID, identifier stri
 	}()
 	select {
 	case <-ctx.Done():
-		s.logger.Print("getting text/binary failed")
+		s.logger.Print("getting text/binary failed due to context timeout")
 		return nil, &storageErrors.ContextTimeoutExceededError{Err: ctx.Err()}
 	case methodErr := <-chanEr:
-		s.logger.Print("getting text/binary failed")
+		s.logger.Print("getting text/binary failed due to storage error")
 		return nil, methodErr
 	case query := <-chanOk:
 		s.logger.Print("getting text/binary done")
@@ -258,32 +255,30 @@ func (s *Storage) SetBankCardData(ctx context.Context, userID, identifier, numbe
 	chanOk := make(chan bool)
 	chanEr := make(chan error)
 	go func() {
+		s.mu.Lock()
+		defer s.mu.Unlock()
 		var queryOutput modelstorage.BankCardStorageEntry
 		err := selectStmt.QueryRowContext(ctx, userID, identifier).Scan(&queryOutput.ID, &queryOutput.UserID, &queryOutput.Identifier, &queryOutput.Number, &queryOutput.Holder, &queryOutput.CVV, &queryOutput.Meta)
-		if err != nil {
-			switch {
-			case errors.Is(err, sql.ErrNoRows):
-				_, err = newDataStmt.ExecContext(ctx, userID, identifier, number, holder, cvv, meta)
-				if err != nil {
-					chanEr <- &storageErrors.ExecutionPSQLError{Err: err}
-					return
-				}
-				chanOk <- true
-			default:
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			_, err = newDataStmt.ExecContext(ctx, userID, identifier, number, holder, cvv, meta)
+			if err != nil {
 				chanEr <- &storageErrors.ExecutionPSQLError{Err: err}
 				return
 			}
+			chanOk <- true
+		case err != nil:
+			chanEr <- &storageErrors.ExecutionPSQLError{Err: err}
+		default:
+			chanEr <- &storageErrors.AlreadyExistsError{Err: err}
 		}
-		chanEr <- &storageErrors.AlreadyExistsError{Err: err}
-		return
 	}()
-
 	select {
 	case <-ctx.Done():
-		s.logger.Printf("adding new bank card failed for ID %s", identifier)
+		s.logger.Printf("adding new bank card failed for ID %s due to context timeout", identifier)
 		return &storageErrors.ContextTimeoutExceededError{Err: ctx.Err()}
 	case methodErr := <-chanEr:
-		s.logger.Printf("adding new bank card failed for ID %s", identifier)
+		s.logger.Printf("adding new bank card failed for ID %s due to storage error", identifier)
 		return methodErr
 	case <-chanOk:
 		s.logger.Printf("adding new bank card done for ID %s", identifier)
@@ -305,32 +300,30 @@ func (s *Storage) SetLoginPasswordData(ctx context.Context, userID, identifier, 
 	chanOk := make(chan bool)
 	chanEr := make(chan error)
 	go func() {
+		s.mu.Lock()
+		defer s.mu.Unlock()
 		var queryOutput modelstorage.LoginPasswordStorageEntry
 		err := selectStmt.QueryRowContext(ctx, userID, identifier).Scan(&queryOutput.ID, &queryOutput.UserID, &queryOutput.Identifier, &queryOutput.Login, &queryOutput.Password, &queryOutput.Meta)
-		if err != nil {
-			switch {
-			case errors.Is(err, sql.ErrNoRows):
-				_, err = newDataStmt.ExecContext(ctx, userID, identifier, login, password, meta)
-				if err != nil {
-					chanEr <- &storageErrors.ExecutionPSQLError{Err: err}
-					return
-				}
-				chanOk <- true
-			default:
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			_, err = newDataStmt.ExecContext(ctx, userID, identifier, login, password, meta)
+			if err != nil {
 				chanEr <- &storageErrors.ExecutionPSQLError{Err: err}
 				return
 			}
+			chanOk <- true
+		case err != nil:
+			chanEr <- &storageErrors.ExecutionPSQLError{Err: err}
+		default:
+			chanEr <- &storageErrors.AlreadyExistsError{Err: err}
 		}
-		chanEr <- &storageErrors.AlreadyExistsError{Err: err}
-		return
 	}()
-
 	select {
 	case <-ctx.Done():
-		s.logger.Printf("adding new login/password failed for ID %s", identifier)
+		s.logger.Printf("adding new login/password failed for ID %s due to context timeout", identifier)
 		return &storageErrors.ContextTimeoutExceededError{Err: ctx.Err()}
 	case methodErr := <-chanEr:
-		s.logger.Printf("adding new login/password failed for ID %s", identifier)
+		s.logger.Printf("adding new login/password failed for ID %s due to storage error", identifier)
 		return methodErr
 	case <-chanOk:
 		s.logger.Printf("adding new login/password done for ID %s", identifier)
@@ -352,32 +345,30 @@ func (s *Storage) SetTextBinaryData(ctx context.Context, userID, identifier, ent
 	chanOk := make(chan bool)
 	chanEr := make(chan error)
 	go func() {
+		s.mu.Lock()
+		defer s.mu.Unlock()
 		var queryOutput modelstorage.TextBinaryStorageEntry
 		err := selectStmt.QueryRowContext(ctx, userID, identifier).Scan(&queryOutput.ID, &queryOutput.UserID, &queryOutput.Identifier, &queryOutput.Entry, &queryOutput.Meta)
-		if err != nil {
-			switch {
-			case errors.Is(err, sql.ErrNoRows):
-				_, err = newDataStmt.ExecContext(ctx, userID, identifier, entry, meta)
-				if err != nil {
-					chanEr <- &storageErrors.ExecutionPSQLError{Err: err}
-					return
-				}
-				chanOk <- true
-			default:
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			_, err = newDataStmt.ExecContext(ctx, userID, identifier, entry, meta)
+			if err != nil {
 				chanEr <- &storageErrors.ExecutionPSQLError{Err: err}
 				return
 			}
+			chanOk <- true
+		case err != nil:
+			chanEr <- &storageErrors.ExecutionPSQLError{Err: err}
+		default:
+			chanEr <- &storageErrors.AlreadyExistsError{Err: err}
 		}
-		chanEr <- &storageErrors.AlreadyExistsError{Err: err}
-		return
 	}()
-
 	select {
 	case <-ctx.Done():
-		s.logger.Printf("adding new text/binary failed for ID %s", identifier)
+		s.logger.Printf("adding new text/binary failed for ID %s due to context timeout", identifier)
 		return &storageErrors.ContextTimeoutExceededError{Err: ctx.Err()}
 	case methodErr := <-chanEr:
-		s.logger.Printf("adding new text/binary failed for ID %s", identifier)
+		s.logger.Printf("adding new text/binary failed for ID %s due to storage error", identifier)
 		return methodErr
 	case <-chanOk:
 		s.logger.Printf("adding new text/binary done for ID %s", identifier)
@@ -397,17 +388,17 @@ func (s *Storage) AddNewUser(ctx context.Context, login, password, userID string
 		s.mu.Lock()
 		defer s.mu.Unlock()
 		_, err := newUserStmt.ExecContext(ctx, userID, login, password, time.Now().Format(time.RFC3339))
-		if err != nil {
+		switch {
+		case err != nil:
 			if err, ok := err.(*pgconn.PgError); ok && err.Code == pgerrcode.UniqueViolation {
 				chanEr <- &storageErrors.AlreadyExistsError{Err: err, ID: login}
 				return
 			}
 			chanEr <- &storageErrors.ExecutionPSQLError{Err: err}
-			return
+		default:
+			chanOk <- true
 		}
-		chanOk <- true
 	}()
-
 	select {
 	case <-ctx.Done():
 		s.logger.Printf("Adding new user failed for %s due to context timeout", login)
@@ -433,28 +424,25 @@ func (s *Storage) CheckUser(ctx context.Context, login, password string) (string
 		s.mu.Lock()
 		defer s.mu.Unlock()
 		var queryOutput modelstorage.UserStorageEntry
-		err1 := selectStmt.QueryRowContext(ctx, login).Scan(&queryOutput.ID, &queryOutput.UserID, &queryOutput.Login, &queryOutput.Password, &queryOutput.RegisteredAt)
-		if err1 != nil {
-			switch {
-			case errors.Is(err1, sql.ErrNoRows):
-				s.logger.Print("Absent login detected")
-				chanEr <- &storageErrors.NotFoundError{Err: err1}
-				return
-			default:
-				chanEr <- err1
+		err := selectStmt.QueryRowContext(ctx, login).Scan(&queryOutput.ID, &queryOutput.UserID, &queryOutput.Login, &queryOutput.Password, &queryOutput.RegisteredAt)
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			s.logger.Print("Absent login detected")
+			chanEr <- &storageErrors.NotFoundError{Err: err}
+		case err != nil:
+			chanEr <- err
+		default:
+			passwordHash := sha256.Sum256([]byte(password))
+			expectedPasswordHash := sha256.Sum256([]byte(queryOutput.Password))
+			passwordMatch := subtle.ConstantTimeCompare(passwordHash[:], expectedPasswordHash[:]) == 1
+			if !passwordMatch {
+				s.logger.Print("Unsuccessful authentication detected")
+				chanEr <- &storageErrors.InvalidPasswordError{Err: nil}
 				return
 			}
+			chanOk <- queryOutput.UserID
 		}
-		passwordHash := sha256.Sum256([]byte(password))
-		expectedPasswordHash := sha256.Sum256([]byte(queryOutput.Password))
-		passwordMatch := subtle.ConstantTimeCompare(passwordHash[:], expectedPasswordHash[:]) == 1
-		if !passwordMatch {
-			s.logger.Print("Unsuccessful authentication detected")
-			chanEr <- &storageErrors.InvalidPasswordError{Err: nil}
-		}
-		chanOk <- queryOutput.UserID
 	}()
-
 	select {
 	case <-ctx.Done():
 		s.logger.Print("User authentication failed due to context timeout")
@@ -473,7 +461,6 @@ func (s *Storage) SendToQueue(item modelstorage.Removal) {
 }
 
 func (s *Storage) DeleteBatch(ctx context.Context, identifiers []string, userID, db string) error {
-	// prepare DELETE statement
 	var deleteStmt *sql.Stmt
 	var err error
 	switch db {
@@ -494,7 +481,6 @@ func (s *Storage) DeleteBatch(ctx context.Context, identifiers []string, userID,
 		return &storageErrors.StatementPSQLError{Err: err}
 	}
 
-	//begin transaction
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return &storageErrors.ExecutionPSQLError{Err: err}
@@ -515,8 +501,6 @@ func (s *Storage) DeleteBatch(ctx context.Context, identifiers []string, userID,
 		}
 		deleteDone <- true
 	}()
-
-	// wait for the first channel to retrieve a value
 	select {
 	case <-ctx.Done():
 		log.Println("Deleting data:", ctx.Err())

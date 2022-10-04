@@ -39,7 +39,7 @@ func InitServer(cfg *config.Config, storage storage.DataStorage, logger *log.Log
 
 func (s *GophkeeperServer) Register(ctx context.Context, request *pb.LoginRegisterRequest) (*emptypb.Empty, error) {
 	s.logger.Print("New register request received")
-	ctx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.HandlersTO)*time.Millisecond)
 	defer cancel()
 	accessToken, err := s.processor.AddNewUser(ctx, request.Login, request.Password)
 	if err != nil {
@@ -59,7 +59,7 @@ func (s *GophkeeperServer) Register(ctx context.Context, request *pb.LoginRegist
 
 func (s *GophkeeperServer) Login(ctx context.Context, request *pb.LoginRegisterRequest) (*emptypb.Empty, error) {
 	s.logger.Print("New login request received")
-	ctx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.HandlersTO)*time.Millisecond)
 	defer cancel()
 	accessToken, err := s.processor.LoginUser(ctx, request.Login, request.Password)
 	if err != nil {
@@ -74,4 +74,140 @@ func (s *GophkeeperServer) Login(ctx context.Context, request *pb.LoginRegisterR
 	s.logger.Print("New login request succeeded")
 	var response emptypb.Empty
 	return &response, nil
+}
+
+func (s *GophkeeperServer) DeleteBankCard(ctx context.Context, request *pb.DeleteBankCardRequest) (*emptypb.Empty, error) {
+	s.logger.Print("New DELETE bank card request received")
+	userID := s.getUserID(ctx)
+	s.processor.Delete(userID, request.Identifier, s.cfg.BankCardDB)
+	var response emptypb.Empty
+	return &response, nil
+}
+
+func (s *GophkeeperServer) DeleteLoginPassword(ctx context.Context, request *pb.DeleteLoginPasswordRequest) (*emptypb.Empty, error) {
+	s.logger.Print("New DELETE login/password request received")
+	userID := s.getUserID(ctx)
+	s.processor.Delete(userID, request.Identifier, s.cfg.LoginPasswordDB)
+	var response emptypb.Empty
+	return &response, nil
+}
+
+func (s *GophkeeperServer) DeleteTextBinary(ctx context.Context, request *pb.DeleteTextBinaryRequest) (*emptypb.Empty, error) {
+	s.logger.Print("New DELETE text/binary request received")
+	userID := s.getUserID(ctx)
+	s.processor.Delete(userID, request.Identifier, s.cfg.TextBinaryDB)
+	var response emptypb.Empty
+	return &response, nil
+}
+
+func (s *GophkeeperServer) PostBankCard(ctx context.Context, request *pb.SendBankCardRequest) (*emptypb.Empty, error) {
+	s.logger.Print("New POST bank card request received")
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.HandlersTO)*time.Millisecond)
+	defer cancel()
+	userID := s.getUserID(ctx)
+	err := s.processor.SetBankCardData(ctx, userID, request.Identifier, request.Number, request.Holder, request.Cvv, request.Meta)
+	if err != nil {
+		return nil, err
+	}
+	var response emptypb.Empty
+	return &response, nil
+}
+
+func (s *GophkeeperServer) PostLoginPassword(ctx context.Context, request *pb.SendLoginPasswordRequest) (*emptypb.Empty, error) {
+	s.logger.Print("New POST login/password request received")
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.HandlersTO)*time.Millisecond)
+	defer cancel()
+	userID := s.getUserID(ctx)
+	err := s.processor.SetLoginPasswordData(ctx, userID, request.Identifier, request.Login, request.Password, request.Meta)
+	if err != nil {
+		return nil, err
+	}
+	var response emptypb.Empty
+	return &response, nil
+}
+
+func (s *GophkeeperServer) PostTextBinary(ctx context.Context, request *pb.SendTextBinaryRequest) (*emptypb.Empty, error) {
+	s.logger.Print("New POST text/binary request received")
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.HandlersTO)*time.Millisecond)
+	defer cancel()
+	userID := s.getUserID(ctx)
+	err := s.processor.SetTextBinaryData(ctx, userID, request.Identifier, request.Entry, request.Meta)
+	if err != nil {
+		return nil, err
+	}
+	var response emptypb.Empty
+	return &response, nil
+}
+
+func (s *GophkeeperServer) GetBankCards(ctx context.Context, _ *emptypb.Empty) (*pb.GetBankCardsResponse, error) {
+	s.logger.Print("New GET bank cards request received")
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.HandlersTO)*time.Millisecond)
+	defer cancel()
+	userID := s.getUserID(ctx)
+	bankCards, err := s.processor.GetBankCardData(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	bankCardsResponse := pb.GetBankCardsResponse{}
+	for _, piece := range bankCards {
+		bankCardResponse := pb.ResponsePieceBankCard{
+			Identifier: piece.Identifier,
+			Number:     piece.Number,
+			Holder:     piece.Holder,
+			Cvv:        piece.CVV,
+			Meta:       piece.Meta,
+		}
+		bankCardsResponse.ResponsePiecesBankCards = append(bankCardsResponse.ResponsePiecesBankCards, &bankCardResponse)
+	}
+	return &bankCardsResponse, nil
+}
+
+func (s *GophkeeperServer) GetLoginsPasswords(ctx context.Context, _ *emptypb.Empty) (*pb.GetLoginsPasswordsResponse, error) {
+	s.logger.Print("New GET logins/passwords request received")
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.HandlersTO)*time.Millisecond)
+	defer cancel()
+	userID := s.getUserID(ctx)
+	loginsPasswords, err := s.processor.GetLoginPasswordData(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	loginsPasswordsResponse := pb.GetLoginsPasswordsResponse{}
+	for _, piece := range loginsPasswords {
+		loginPasswordResponse := pb.ResponsePieceLoginPassword{
+			Identifier: piece.Identifier,
+			Login:      piece.Login,
+			Password:   piece.Password,
+			Meta:       piece.Meta,
+		}
+		loginsPasswordsResponse.ResponsePiecesLoginsPasswords = append(loginsPasswordsResponse.ResponsePiecesLoginsPasswords, &loginPasswordResponse)
+	}
+	return &loginsPasswordsResponse, nil
+}
+
+func (s *GophkeeperServer) GetTextsBinaries(ctx context.Context, _ *emptypb.Empty) (*pb.GetTextsBinariesResponse, error) {
+	s.logger.Print("New GET texts/binaries request received")
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.HandlersTO)*time.Millisecond)
+	defer cancel()
+	userID := s.getUserID(ctx)
+	textsBinaries, err := s.processor.GetTextBinaryData(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	textsBinariesResponse := pb.GetTextsBinariesResponse{}
+	for _, piece := range textsBinaries {
+		textBinaryResponse := pb.ResponsePieceTextBinary{
+			Identifier: piece.Identifier,
+			Entry:      piece.Entry,
+			Meta:       piece.Meta,
+		}
+		textsBinariesResponse.ResponsePiecesTextsBinaries = append(textsBinariesResponse.ResponsePiecesTextsBinaries, &textBinaryResponse)
+	}
+	return &textsBinariesResponse, nil
+}
+
+func (s *GophkeeperServer) getUserID(ctx context.Context) string {
+	md, _ := metadata.FromIncomingContext(ctx)
+	values := md.Get(s.cfg.AuthBearerName)
+	userID := values[0]
+	return userID
 }

@@ -17,9 +17,9 @@ type RegisterLogin interface {
 }
 
 type Getter interface {
-	GetBankCardData(ctx context.Context, userID, identifier string) ([]modelstorage.BankCardStorageEntry, error)
-	GetLoginPasswordData(ctx context.Context, userID, identifier string) ([]modelstorage.LoginPasswordStorageEntry, error)
-	GetTextBinaryData(ctx context.Context, userID, identifier string) ([]modelstorage.TextBinaryStorageEntry, error)
+	GetBankCardData(ctx context.Context, userID string) ([]modelstorage.BankCardStorageEntry, error)
+	GetLoginPasswordData(ctx context.Context, userID string) ([]modelstorage.LoginPasswordStorageEntry, error)
+	GetTextBinaryData(ctx context.Context, userID string) ([]modelstorage.TextBinaryStorageEntry, error)
 }
 
 type Setter interface {

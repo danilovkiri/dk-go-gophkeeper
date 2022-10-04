@@ -13,9 +13,9 @@ type Authorizer interface {
 }
 
 type Getter interface {
-	GetBankCardData(ctx context.Context, userID, identifier string) ([]modeldto.BankCard, error)
-	GetLoginPasswordData(ctx context.Context, userID, identifier string) ([]modeldto.LoginPassword, error)
-	GetTextBinaryData(ctx context.Context, userID, identifier string) ([]modeldto.TextBinary, error)
+	GetBankCardData(ctx context.Context, userID string) ([]modeldto.BankCard, error)
+	GetLoginPasswordData(ctx context.Context, userID string) ([]modeldto.LoginPassword, error)
+	GetTextBinaryData(ctx context.Context, userID string) ([]modeldto.TextBinary, error)
 }
 
 type Setter interface {
