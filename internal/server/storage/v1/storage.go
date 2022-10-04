@@ -104,7 +104,7 @@ func InitStorage(ctx context.Context, logger *log.Logger, cfg *config.Config, wg
 }
 
 func (s *Storage) GetBankCardData(ctx context.Context, userID string) ([]modelstorage.BankCardStorageEntry, error) {
-	selectStmt, err := s.DB.PrepareContext(ctx, "SELECT * FROM logins_passwords WHERE user_id = $1")
+	selectStmt, err := s.DB.PrepareContext(ctx, "SELECT * FROM bank_cards WHERE user_id = $1")
 	defer selectStmt.Close()
 	if err != nil {
 		return nil, &storageErrors.StatementPSQLError{Err: err}

@@ -111,7 +111,7 @@ func (c *GRPCClient) GetTextsBinaries() (map[string]modelstorage.TextOrBinary, c
 		}
 		return nil, codes.Unknown, err
 	}
-	var result map[string]modelstorage.TextOrBinary
+	result := make(map[string]modelstorage.TextOrBinary)
 	for _, responsePiece := range resp.ResponsePiecesTextsBinaries {
 		resultPiece := modelstorage.TextOrBinary{
 			Identifier: responsePiece.Identifier,
@@ -136,7 +136,7 @@ func (c *GRPCClient) GetLoginsPasswords() (map[string]modelstorage.LoginAndPassw
 		}
 		return nil, codes.Unknown, err
 	}
-	var result map[string]modelstorage.LoginAndPassword
+	result := make(map[string]modelstorage.LoginAndPassword)
 	for _, responsePiece := range resp.ResponsePiecesLoginsPasswords {
 		resultPiece := modelstorage.LoginAndPassword{
 			Identifier: responsePiece.Identifier,
@@ -162,7 +162,7 @@ func (c *GRPCClient) GetBankCards() (map[string]modelstorage.BankCard, codes.Cod
 		}
 		return nil, codes.Unknown, err
 	}
-	var result map[string]modelstorage.BankCard
+	result := make(map[string]modelstorage.BankCard)
 	for _, responsePiece := range resp.ResponsePiecesBankCards {
 		resultPiece := modelstorage.BankCard{
 			Identifier: responsePiece.Identifier,
