@@ -3,7 +3,6 @@ package tui
 
 import (
 	"context"
-	"dk-go-gophkeeper/internal/client/grpcclient"
 	"dk-go-gophkeeper/internal/client/storage"
 	"dk-go-gophkeeper/internal/client/tui/modeltui"
 	"dk-go-gophkeeper/internal/config"
@@ -26,8 +25,8 @@ var pages = tview.NewPages()
 // start screen static attributes
 
 var header = tview.NewTextView().SetText(fmt.Sprintf("GophKeeper: build %s, date %s, commit %s", buildVersion, buildDate, buildCommit)).SetTextAlign(1)
-var footer = tview.NewTextView().SetText(fmt.Sprint("Kirill Danilov, 2022, https://github.com/danilovkiri/")).SetTextAlign(1)
-var statusHeader = tview.NewTextView().SetText(fmt.Sprint("Last operation status:")).SetTextAlign(1)
+var footer = tview.NewTextView().SetText("Kirill Danilov, 2022, https://github.com/danilovkiri/").SetTextAlign(1)
+var statusHeader = tview.NewTextView().SetText("Last operation status:").SetTextAlign(1)
 var buttonSync = tview.NewButton("Sync")
 var buttonQuit = tview.NewButton("Quit")
 var buttonLogin = tview.NewButton("Login")
@@ -71,7 +70,6 @@ type App struct {
 	operationStatus        *tview.TextView
 	result                 *tview.TextView
 	logger                 *log.Logger
-	clientGRPC             grpcclient.GRPCClient
 	cfg                    *config.Config
 }
 

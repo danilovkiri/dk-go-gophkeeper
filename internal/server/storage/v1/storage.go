@@ -519,7 +519,12 @@ func (s *Storage) DeleteBatch(ctx context.Context, identifiers []string, userID,
 	if err != nil {
 		return &storageErrors.ExecutionPSQLError{Err: err}
 	}
-	defer tx.Rollback()
+	defer func(tx *sql.Tx) {
+		err := tx.Rollback()
+		if err != nil {
+			return
+		}
+	}(tx)
 	txDeleteStmt := tx.StmtContext(ctx, deleteStmt)
 	// create channels for listening to the go routine result
 	deleteDone := make(chan bool)
