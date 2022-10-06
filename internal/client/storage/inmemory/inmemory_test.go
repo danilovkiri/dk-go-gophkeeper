@@ -20,7 +20,7 @@ func TestInitStorage(t *testing.T) {
 	cfg.TextBinaryDB = "textBinary"
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock_grpcclient.NewMockGRPCClient(ctrl)
+	client := mocks.NewMockGRPCClient(ctrl)
 	_ = InitStorage(log.New(os.Stdout, "test ", 0), client, cfg)
 }
 
@@ -31,7 +31,7 @@ func TestStorage_Remove(t *testing.T) {
 	cfg.TextBinaryDB = "textBinary"
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock_grpcclient.NewMockGRPCClient(ctrl)
+	client := mocks.NewMockGRPCClient(ctrl)
 	client.EXPECT().SendBankCard(gomock.Any()).Return(codes.OK, nil)
 	client.EXPECT().SendLoginPassword(gomock.Any()).Return(codes.OK, nil)
 	client.EXPECT().SendTextBinary(gomock.Any()).Return(codes.OK, nil)
@@ -83,7 +83,7 @@ func TestStorage_Login(t *testing.T) {
 	cfg.TextBinaryDB = "textBinary"
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock_grpcclient.NewMockGRPCClient(ctrl)
+	client := mocks.NewMockGRPCClient(ctrl)
 	client.EXPECT().SendBankCard(gomock.Any()).Return(codes.OK, nil)
 	client.EXPECT().SendLoginPassword(gomock.Any()).Return(codes.OK, nil)
 	client.EXPECT().SendTextBinary(gomock.Any()).Return(codes.OK, nil)
@@ -119,7 +119,7 @@ func TestStorage_Register(t *testing.T) {
 	cfg.TextBinaryDB = "textBinary"
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock_grpcclient.NewMockGRPCClient(ctrl)
+	client := mocks.NewMockGRPCClient(ctrl)
 	client.EXPECT().SendBankCard(gomock.Any()).Return(codes.OK, nil)
 	client.EXPECT().SendLoginPassword(gomock.Any()).Return(codes.OK, nil)
 	client.EXPECT().SendTextBinary(gomock.Any()).Return(codes.OK, nil)
@@ -155,7 +155,7 @@ func TestStorage_AddBankCard(t *testing.T) {
 	cfg.TextBinaryDB = "textBinary"
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock_grpcclient.NewMockGRPCClient(ctrl)
+	client := mocks.NewMockGRPCClient(ctrl)
 	st := InitStorage(log.New(os.Stdout, "test ", 0), client, cfg)
 
 	err := st.AddBankCard("", "", "", "", "")
@@ -180,7 +180,7 @@ func TestStorage_AddLoginPassword(t *testing.T) {
 	cfg.TextBinaryDB = "textBinary"
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock_grpcclient.NewMockGRPCClient(ctrl)
+	client := mocks.NewMockGRPCClient(ctrl)
 	st := InitStorage(log.New(os.Stdout, "test ", 0), client, cfg)
 
 	err := st.AddLoginPassword("", "", "", "")
@@ -205,7 +205,7 @@ func TestStorage_AddTextBinary(t *testing.T) {
 	cfg.TextBinaryDB = "textBinary"
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock_grpcclient.NewMockGRPCClient(ctrl)
+	client := mocks.NewMockGRPCClient(ctrl)
 	st := InitStorage(log.New(os.Stdout, "test ", 0), client, cfg)
 
 	err := st.AddTextBinary("", "", "")
@@ -230,7 +230,7 @@ func TestStorage_Get(t *testing.T) {
 	cfg.TextBinaryDB = "textBinary"
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock_grpcclient.NewMockGRPCClient(ctrl)
+	client := mocks.NewMockGRPCClient(ctrl)
 	client.EXPECT().SendBankCard(gomock.Any()).Return(codes.OK, nil)
 	client.EXPECT().SendLoginPassword(gomock.Any()).Return(codes.OK, nil)
 	client.EXPECT().SendTextBinary(gomock.Any()).Return(codes.OK, nil)
@@ -268,7 +268,7 @@ func TestStorage_Sync(t *testing.T) {
 	cfg.TextBinaryDB = "textBinary"
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock_grpcclient.NewMockGRPCClient(ctrl)
+	client := mocks.NewMockGRPCClient(ctrl)
 	client.EXPECT().SendBankCard(gomock.Any()).Return(codes.OK, nil)
 	client.EXPECT().SendLoginPassword(gomock.Any()).Return(codes.OK, nil)
 	client.EXPECT().SendTextBinary(gomock.Any()).Return(codes.OK, nil)

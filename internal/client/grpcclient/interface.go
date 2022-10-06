@@ -43,8 +43,8 @@ type Remover interface {
 	RemoveTextBinary(string) (codes.Code, error)
 }
 
-// Authorizer defines a set of methods for types implementing Authorizer.
-type Authorizer interface {
+// ClientAuthorizer defines a set of methods for types implementing ClientAuthorizer.
+type ClientAuthorizer interface {
 	Login(modelstorage.RegisterLogin) (codes.Code, error)
 	Register(modelstorage.RegisterLogin) (codes.Code, error)
 }
@@ -58,5 +58,5 @@ type GRPCClient interface {
 	LoginPasswordSender
 	TextBinarySender
 	Remover
-	Authorizer
+	ClientAuthorizer
 }

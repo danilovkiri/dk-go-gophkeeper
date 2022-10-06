@@ -13,8 +13,8 @@ type BatchDeleter interface {
 	Flush(ctx context.Context, batch []modelstorage.Removal) error
 }
 
-// Authorizer defines a set of methods for types implementing Authorizer.
-type Authorizer interface {
+// StorageAuthorizer defines a set of methods for types implementing StorageAuthorizer.
+type StorageAuthorizer interface {
 	AddNewUser(ctx context.Context, login, password, userID string) error
 	CheckUser(ctx context.Context, login, password string) (string, error)
 }
@@ -35,7 +35,7 @@ type Setter interface {
 
 // DataStorage defines a set of methods for types implementing DataStorage.
 type DataStorage interface {
-	Authorizer
+	StorageAuthorizer
 	BatchDeleter
 	Getter
 	Setter
