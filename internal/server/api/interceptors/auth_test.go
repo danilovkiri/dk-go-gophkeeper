@@ -109,7 +109,12 @@ func TestAuthHandler_UnaryServerInterceptor_FailDataAccess(t *testing.T) {
 		t.Fatal(err)
 	}
 	pb.RegisterGophkeeperServer(s, server)
-	go s.Serve(listen)
+	go func(t *testing.T) {
+		err := s.Serve(listen)
+		if err != nil {
+			t.Error(err)
+		}
+	}(t)
 
 	conn, err := grpc.Dial(":8080", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -148,7 +153,12 @@ func TestAuthHandler_UnaryServerInterceptor_Login(t *testing.T) {
 		t.Fatal(err)
 	}
 	pb.RegisterGophkeeperServer(s, server)
-	go s.Serve(listen)
+	go func(t *testing.T) {
+		err := s.Serve(listen)
+		if err != nil {
+			t.Error(err)
+		}
+	}(t)
 
 	conn, err := grpc.Dial(":8080", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -187,7 +197,12 @@ func TestAuthHandler_UnaryServerInterceptor_Register(t *testing.T) {
 		t.Fatal(err)
 	}
 	pb.RegisterGophkeeperServer(s, server)
-	go s.Serve(listen)
+	go func(t *testing.T) {
+		err := s.Serve(listen)
+		if err != nil {
+			t.Error(err)
+		}
+	}(t)
 
 	conn, err := grpc.Dial(":8080", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
