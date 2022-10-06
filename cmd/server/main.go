@@ -18,6 +18,8 @@ import (
 	"syscall"
 )
 
+// build parameters to be used with ldflags
+
 var (
 	buildVersion string
 	buildDate    string

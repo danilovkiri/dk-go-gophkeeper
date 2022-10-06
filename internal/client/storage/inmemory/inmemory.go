@@ -6,6 +6,7 @@ import (
 	"dk-go-gophkeeper/internal/client/grpcclient"
 	"dk-go-gophkeeper/internal/client/storage"
 	"dk-go-gophkeeper/internal/client/storage/modelstorage"
+	"errors"
 	"fmt"
 	"golang.org/x/sync/errgroup"
 	"log"
@@ -44,6 +45,9 @@ func InitStorage(logger *log.Logger, client grpcclient.GRPCClient) *Storage {
 // Remove deletes data from local storage and sends delete requests to the server.
 func (s *Storage) Remove(identifier, db string) error {
 	var err error
+	if identifier == "" {
+		return fmt.Errorf("identifier cannot be empty in db %s", db)
+	}
 	switch db {
 	case "bankCard":
 		_, ok := s.bankCardDB[identifier]
@@ -92,6 +96,9 @@ func (s *Storage) Remove(identifier, db string) error {
 
 // Login sends a login request to the server and cleans local DB upon successful response.
 func (s *Storage) Login(login, password string) error {
+	if login == "" || password == "" {
+		return errors.New("Login/Password fields cannot be empty")
+	}
 	newLoginRegisterEntry := modelstorage.RegisterLogin{
 		Login:    login,
 		Password: password,
@@ -107,6 +114,9 @@ func (s *Storage) Login(login, password string) error {
 
 // Register sends a register request to the server and cleans local DB upon successful response.
 func (s *Storage) Register(login, password string) error {
+	if login == "" || password == "" {
+		return errors.New("Login/Password fields cannot be empty")
+	}
 	newLoginRegisterEntry := modelstorage.RegisterLogin{
 		Login:    login,
 		Password: password,
@@ -122,6 +132,9 @@ func (s *Storage) Register(login, password string) error {
 
 // AddBankCard adds a new bank card entry to the local client storage and sends it to the server.
 func (s *Storage) AddBankCard(identifier, number, holder, cvv, meta string) error {
+	if identifier == "" {
+		return errors.New("identifier cannot be empty")
+	}
 	newBankCardEntry := modelstorage.BankCard{
 		Identifier: identifier,
 		Number:     number,
@@ -147,6 +160,9 @@ func (s *Storage) AddBankCard(identifier, number, holder, cvv, meta string) erro
 
 // AddLoginPassword adds a new login/password entry to the local client storage and sends it to the server.
 func (s *Storage) AddLoginPassword(identifier, login, password, meta string) error {
+	if identifier == "" {
+		return errors.New("identifier cannot be empty")
+	}
 	newLoginPasswordEntry := modelstorage.LoginAndPassword{
 		Identifier: identifier,
 		Login:      login,
@@ -171,6 +187,9 @@ func (s *Storage) AddLoginPassword(identifier, login, password, meta string) err
 
 // AddTextBinary adds a new text/binary entry to the local client storage and sends it to the server.
 func (s *Storage) AddTextBinary(identifier, entry, meta string) error {
+	if identifier == "" {
+		return errors.New("identifier cannot be empty")
+	}
 	newTextBinaryEntry := modelstorage.TextOrBinary{
 		Identifier: identifier,
 		Entry:      entry,

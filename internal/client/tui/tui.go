@@ -10,12 +10,43 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"log"
+	"strings"
+	"unicode"
 )
+
+// build parameters to be used with ldflags
 
 var (
 	buildVersion = "NA"
 	buildDate    = "NA"
 	buildCommit  = "NA"
+)
+
+// tview page identifiers
+
+const (
+	pageStoreLoginPassword = "store_login_password"
+	pageStoreTextBinary    = "store_text_binary"
+	pageStoreBankCard      = "store_bank_card"
+	pageRemove             = "remove"
+	pageRegister           = "register"
+	pageLogin              = "login"
+	pageGetData            = "get_data"
+	pageResult             = "result"
+	pageMenu               = "menu"
+)
+
+// tview form field lengths
+
+const (
+	identifierLength     = 20
+	metaLength           = 50
+	bankCardNumberLength = 16
+	bankCardHolderLength = 20
+	bankCardCVVLength    = 3
+	loginLength          = 20
+	passwordLength       = 20
+	textEntryLength      = 50
 )
 
 // shared static attributes
@@ -40,9 +71,9 @@ var menu = tview.NewFlex().
 	AddItem(buttonLogin, 0, 1, false).
 	AddItem(tview.NewBox(), 0, 1, false).
 	AddItem(buttonRegister, 0, 1, false)
-var buttonStoreLoginPassword = tview.NewButton("Add loginPassword item")
-var buttonStoreTextBinary = tview.NewButton("Add textBinary item")
-var buttonStoreBankCard = tview.NewButton("Add bankCard item")
+var buttonStoreLoginPassword = tview.NewButton("Add login/password item")
+var buttonStoreTextBinary = tview.NewButton("Add text/binary item")
+var buttonStoreBankCard = tview.NewButton("Add bank card item")
 var buttonGetData = tview.NewButton("Get item")
 var buttonRemove = tview.NewButton("Remove item")
 var buttonBackToMainScreen = tview.NewButton("Back to menu")
@@ -84,8 +115,13 @@ type App struct {
 // addRetrieveDataPieceForm defines form behavior and its contents.
 func (a *App) addRetrieveDataPieceForm() *tview.Form {
 	query := modeltui.Get{}
-	a.retrieveDataPieceForm.AddInputField("Identifier", "", 20, nil, func(id string) {
-		query.Identifier = id
+	a.retrieveDataPieceForm.AddInputField("Identifier", "", identifierLength, nil, func(id string) {
+		if strings.ReplaceAll(id, " ", "") == "" {
+			a.operationStatus.SetText("Identifier cannot be empty")
+			pages.SwitchToPage("menu")
+		} else {
+			query.Identifier = id
+		}
 	})
 	a.retrieveDataPieceForm.AddDropDown("DB type", []string{a.cfg.BankCardDB, a.cfg.LoginPasswordDB, a.cfg.TextBinaryDB}, 0, func(db string, idx int) {
 		query.Db = db
@@ -101,7 +137,7 @@ func (a *App) addRetrieveDataPieceForm() *tview.Form {
 			pages.SwitchToPage("result")
 		}
 	})
-	a.retrieveDataPieceForm.AddButton("Exit", func() {
+	a.retrieveDataPieceForm.AddButton("Cancel", func() {
 		pages.SwitchToPage("menu")
 	})
 	return a.retrieveDataPieceForm
@@ -110,13 +146,18 @@ func (a *App) addRetrieveDataPieceForm() *tview.Form {
 // addRemovalForm defines form behavior and its contents.
 func (a *App) addRemovalForm() *tview.Form {
 	removal := modeltui.Removal{}
-	a.removeForm.AddInputField("Identifier", "", 20, nil, func(id string) {
-		removal.Identifier = id
+	a.removeForm.AddInputField("Identifier", "", identifierLength, nil, func(id string) {
+		if strings.ReplaceAll(id, " ", "") == "" {
+			a.operationStatus.SetText("Identifier cannot be empty")
+			pages.SwitchToPage("menu")
+		} else {
+			removal.Identifier = id
+		}
 	})
 	a.removeForm.AddDropDown("DB type", []string{a.cfg.BankCardDB, a.cfg.LoginPasswordDB, a.cfg.TextBinaryDB}, 0, func(db string, idx int) {
 		removal.Db = db
 	})
-	a.removeForm.AddButton("Execute", func() {
+	a.removeForm.AddButton("Remove", func() {
 		err := a.storage.Remove(removal.Identifier, removal.Db)
 		if err != nil {
 			a.operationStatus.SetText(err.Error())
@@ -125,7 +166,7 @@ func (a *App) addRemovalForm() *tview.Form {
 		}
 		pages.SwitchToPage("menu")
 	})
-	a.removeForm.AddButton("Exit", func() {
+	a.removeForm.AddButton("Cancel", func() {
 		pages.SwitchToPage("menu")
 	})
 	return a.removeForm
@@ -134,19 +175,34 @@ func (a *App) addRemovalForm() *tview.Form {
 // addLoginPasswordForm defines form behavior and its contents.
 func (a *App) addLoginPasswordForm() *tview.Form {
 	loginAndPassword := modeltui.LoginAndPassword{}
-	a.storeLoginPasswordForm.AddInputField("Identifier", "", 20, nil, func(id string) {
-		loginAndPassword.Identifier = id
+	a.storeLoginPasswordForm.AddInputField("Identifier", "", identifierLength, nil, func(id string) {
+		if strings.ReplaceAll(id, " ", "") == "" {
+			a.operationStatus.SetText("Identifier cannot be empty")
+			pages.SwitchToPage("menu")
+		} else {
+			loginAndPassword.Identifier = id
+		}
 	})
-	a.storeLoginPasswordForm.AddInputField("Login", "", 20, nil, func(login string) {
-		loginAndPassword.Login = login
+	a.storeLoginPasswordForm.AddInputField("Login", "", loginLength, nil, func(login string) {
+		if strings.ReplaceAll(login, " ", "") == "" {
+			a.operationStatus.SetText("Login cannot be empty")
+			pages.SwitchToPage("menu")
+		} else {
+			loginAndPassword.Login = login
+		}
 	})
-	a.storeLoginPasswordForm.AddInputField("Password", "", 20, nil, func(password string) {
-		loginAndPassword.Password = password
+	a.storeLoginPasswordForm.AddInputField("Password", "", passwordLength, nil, func(password string) {
+		if strings.ReplaceAll(password, " ", "") == "" {
+			a.operationStatus.SetText("Password cannot be empty")
+			pages.SwitchToPage("menu")
+		} else {
+			loginAndPassword.Password = password
+		}
 	})
-	a.storeLoginPasswordForm.AddInputField("Meta", "", 20, nil, func(meta string) {
+	a.storeLoginPasswordForm.AddInputField("Meta", "", metaLength, nil, func(meta string) {
 		loginAndPassword.Meta = meta
 	})
-	a.storeLoginPasswordForm.AddButton("Save", func() {
+	a.storeLoginPasswordForm.AddButton("Submit", func() {
 		err := a.storage.AddLoginPassword(loginAndPassword.Identifier, loginAndPassword.Login, loginAndPassword.Password, loginAndPassword.Meta)
 		if err != nil {
 			a.operationStatus.SetText(err.Error())
@@ -155,7 +211,7 @@ func (a *App) addLoginPasswordForm() *tview.Form {
 		}
 		pages.SwitchToPage("menu")
 	})
-	a.storeLoginPasswordForm.AddButton("Exit", func() {
+	a.storeLoginPasswordForm.AddButton("Cancel", func() {
 		pages.SwitchToPage("menu")
 	})
 	return a.storeLoginPasswordForm
@@ -164,16 +220,21 @@ func (a *App) addLoginPasswordForm() *tview.Form {
 // addTextOrBinaryForm defines form behavior and its contents.
 func (a *App) addTextOrBinaryForm() *tview.Form {
 	textOrBinary := modeltui.TextOrBinary{}
-	a.storeTextOrBinaryForm.AddInputField("Identifier", "", 20, nil, func(id string) {
-		textOrBinary.Identifier = id
+	a.storeTextOrBinaryForm.AddInputField("Identifier", "", identifierLength, nil, func(id string) {
+		if strings.ReplaceAll(id, " ", "") == "" {
+			a.operationStatus.SetText("Identifier cannot be empty")
+			pages.SwitchToPage("menu")
+		} else {
+			textOrBinary.Identifier = id
+		}
 	})
-	a.storeTextOrBinaryForm.AddInputField("Input", "", 20, nil, func(entry string) {
+	a.storeTextOrBinaryForm.AddInputField("Input", "", textEntryLength, nil, func(entry string) {
 		textOrBinary.Entry = entry
 	})
-	a.storeTextOrBinaryForm.AddInputField("Meta", "", 20, nil, func(meta string) {
+	a.storeTextOrBinaryForm.AddInputField("Meta", "", metaLength, nil, func(meta string) {
 		textOrBinary.Meta = meta
 	})
-	a.storeTextOrBinaryForm.AddButton("Save", func() {
+	a.storeTextOrBinaryForm.AddButton("Submit", func() {
 		err := a.storage.AddTextBinary(textOrBinary.Identifier, textOrBinary.Entry, textOrBinary.Meta)
 		if err != nil {
 			a.operationStatus.SetText(err.Error())
@@ -182,7 +243,7 @@ func (a *App) addTextOrBinaryForm() *tview.Form {
 		}
 		pages.SwitchToPage("menu")
 	})
-	a.storeTextOrBinaryForm.AddButton("Exit", func() {
+	a.storeTextOrBinaryForm.AddButton("Cancel", func() {
 		pages.SwitchToPage("menu")
 	})
 	return a.storeTextOrBinaryForm
@@ -191,22 +252,42 @@ func (a *App) addTextOrBinaryForm() *tview.Form {
 // addBankCardForm defines form behavior and its contents.
 func (a *App) addBankCardForm() *tview.Form {
 	bankCard := modeltui.BankCard{}
-	a.storeBankCardForm.AddInputField("Identifier", "", 20, nil, func(id string) {
-		bankCard.Identifier = id
+	a.storeBankCardForm.AddInputField("Identifier", "", identifierLength, nil, func(id string) {
+		if strings.ReplaceAll(id, " ", "") == "" {
+			a.operationStatus.SetText("Identifier cannot be empty")
+			pages.SwitchToPage("menu")
+		} else {
+			bankCard.Identifier = id
+		}
 	})
-	a.storeBankCardForm.AddInputField("Number", "", 20, nil, func(number string) {
-		bankCard.Number = number
+	a.storeBankCardForm.AddInputField("Number", "", bankCardNumberLength, nil, func(number string) {
+		if len(number) != 16 && !isInt(number) {
+			a.operationStatus.SetText("Bank card number must be a 16-digit code")
+			pages.SwitchToPage("menu")
+		} else {
+			bankCard.Number = number
+		}
 	})
-	a.storeBankCardForm.AddInputField("Holder", "", 20, nil, func(holder string) {
-		bankCard.Holder = holder
+	a.storeBankCardForm.AddInputField("Holder", "", bankCardHolderLength, nil, func(holder string) {
+		if strings.ReplaceAll(holder, " ", "") == "" {
+			a.operationStatus.SetText("Bank card holder cannot be empty")
+			pages.SwitchToPage("menu")
+		} else {
+			bankCard.Holder = holder
+		}
 	})
-	a.storeBankCardForm.AddInputField("CVV", "", 20, nil, func(cvv string) {
-		bankCard.Cvv = cvv
+	a.storeBankCardForm.AddInputField("CVV", "", bankCardCVVLength, nil, func(cvv string) {
+		if len(cvv) != 3 && !isInt(cvv) {
+			a.operationStatus.SetText("Bank card CVV must be a 3-digit code")
+			pages.SwitchToPage("menu")
+		} else {
+			bankCard.Number = cvv
+		}
 	})
-	a.storeBankCardForm.AddInputField("Meta", "", 20, nil, func(meta string) {
+	a.storeBankCardForm.AddInputField("Meta", "", metaLength, nil, func(meta string) {
 		bankCard.Meta = meta
 	})
-	a.storeBankCardForm.AddButton("Save", func() {
+	a.storeBankCardForm.AddButton("Submit", func() {
 		err := a.storage.AddBankCard(bankCard.Identifier, bankCard.Number, bankCard.Holder, bankCard.Cvv, bankCard.Meta)
 		if err != nil {
 			a.operationStatus.SetText(err.Error())
@@ -215,7 +296,7 @@ func (a *App) addBankCardForm() *tview.Form {
 		}
 		pages.SwitchToPage("menu")
 	})
-	a.storeBankCardForm.AddButton("Exit", func() {
+	a.storeBankCardForm.AddButton("Cancel", func() {
 		pages.SwitchToPage("menu")
 	})
 	return a.storeBankCardForm
@@ -223,11 +304,21 @@ func (a *App) addBankCardForm() *tview.Form {
 
 // addRegisterForm defines form behavior and its contents.
 func (a *App) addRegisterForm() *tview.Form {
-	a.registerForm.AddInputField("Login", "", 20, nil, func(login string) {
-		a.registerLoginDetails.Login = login
+	a.registerForm.AddInputField("Login", "", loginLength, nil, func(login string) {
+		if strings.ReplaceAll(login, " ", "") == "" {
+			a.operationStatus.SetText("Login cannot be empty")
+			pages.SwitchToPage("menu")
+		} else {
+			a.registerLoginDetails.Login = login
+		}
 	})
-	a.registerForm.AddInputField("Password", "", 20, nil, func(password string) {
-		a.registerLoginDetails.Password = password
+	a.registerForm.AddInputField("Password", "", passwordLength, nil, func(password string) {
+		if strings.ReplaceAll(password, " ", "") == "" {
+			a.operationStatus.SetText("Password cannot be empty")
+			pages.SwitchToPage("menu")
+		} else {
+			a.registerLoginDetails.Password = password
+		}
 	})
 	a.registerForm.AddButton("Submit", func() {
 		err := a.storage.Register(a.registerLoginDetails.Login, a.registerLoginDetails.Password)
@@ -239,7 +330,7 @@ func (a *App) addRegisterForm() *tview.Form {
 		}
 		pages.SwitchToPage("menu")
 	})
-	a.registerForm.AddButton("Exit", func() {
+	a.registerForm.AddButton("Cancel", func() {
 		pages.SwitchToPage("menu")
 	})
 	return a.registerForm
@@ -247,11 +338,21 @@ func (a *App) addRegisterForm() *tview.Form {
 
 // addLoginForm defines form behavior and its contents.
 func (a *App) addLoginForm() *tview.Form {
-	a.loginForm.AddInputField("Login", "", 20, nil, func(login string) {
-		a.registerLoginDetails.Login = login
+	a.loginForm.AddInputField("Login", "", loginLength, nil, func(login string) {
+		if strings.ReplaceAll(login, " ", "") == "" {
+			a.operationStatus.SetText("Login cannot be empty")
+			pages.SwitchToPage("menu")
+		} else {
+			a.registerLoginDetails.Login = login
+		}
 	})
-	a.loginForm.AddInputField("Password", "", 20, nil, func(password string) {
-		a.registerLoginDetails.Password = password
+	a.loginForm.AddInputField("Password", "", passwordLength, nil, func(password string) {
+		if strings.ReplaceAll(password, " ", "") == "" {
+			a.operationStatus.SetText("Password cannot be empty")
+			pages.SwitchToPage("menu")
+		} else {
+			a.registerLoginDetails.Password = password
+		}
 	})
 	a.loginForm.AddButton("Submit", func() {
 		err := a.storage.Login(a.registerLoginDetails.Login, a.registerLoginDetails.Password)
@@ -263,7 +364,7 @@ func (a *App) addLoginForm() *tview.Form {
 		}
 		pages.SwitchToPage("menu")
 	})
-	a.loginForm.AddButton("Exit", func() {
+	a.loginForm.AddButton("Cancel", func() {
 		pages.SwitchToPage("menu")
 	})
 	return a.loginForm
@@ -303,32 +404,32 @@ func (a *App) Run() {
 	buttonStoreLoginPassword.SetSelectedFunc(func() {
 		a.storeLoginPasswordForm.Clear(true)
 		a.addLoginPasswordForm()
-		pages.SwitchToPage("store_login_password")
+		pages.SwitchToPage(pageStoreLoginPassword)
 	})
 	buttonStoreTextBinary.SetSelectedFunc(func() {
 		a.storeTextOrBinaryForm.Clear(true)
 		a.addTextOrBinaryForm()
-		pages.SwitchToPage("store_text_binary")
+		pages.SwitchToPage(pageStoreTextBinary)
 	})
 	buttonStoreBankCard.SetSelectedFunc(func() {
 		a.storeBankCardForm.Clear(true)
 		a.addBankCardForm()
-		pages.SwitchToPage("store_bank_card")
+		pages.SwitchToPage(pageStoreBankCard)
 	})
 	buttonRemove.SetSelectedFunc(func() {
 		a.removeForm.Clear(true)
 		a.addRemovalForm()
-		pages.SwitchToPage("remove")
+		pages.SwitchToPage(pageRemove)
 	})
 	buttonRegister.SetSelectedFunc(func() {
 		a.registerForm.Clear(true)
 		a.addRegisterForm()
-		pages.SwitchToPage("register")
+		pages.SwitchToPage(pageRegister)
 	})
 	buttonLogin.SetSelectedFunc(func() {
 		a.loginForm.Clear(true)
 		a.addLoginForm()
-		pages.SwitchToPage("login")
+		pages.SwitchToPage(pageLogin)
 	})
 	buttonQuit.SetSelectedFunc(func() {
 		a.App.Stop()
@@ -345,10 +446,10 @@ func (a *App) Run() {
 	buttonGetData.SetSelectedFunc(func() {
 		a.retrieveDataPieceForm.Clear(true)
 		a.addRetrieveDataPieceForm()
-		pages.SwitchToPage("get_data")
+		pages.SwitchToPage(pageGetData)
 	})
 	buttonBackToMainScreen.SetSelectedFunc(func() {
-		pages.SwitchToPage("menu")
+		pages.SwitchToPage(pageMenu)
 	})
 
 	resultView := tview.NewFlex().SetDirection(tview.FlexRow).
@@ -365,19 +466,29 @@ func (a *App) Run() {
 		AddItem(a.operationStatus, 0, 5, false).
 		AddItem(footer, 0, 1, false)
 
-	pages.AddPage("menu", flex, true, true)
-	pages.AddPage("store_login_password", a.storeLoginPasswordForm, true, false)
-	pages.AddPage("store_text_binary", a.storeTextOrBinaryForm, true, false)
-	pages.AddPage("store_bank_card", a.storeBankCardForm, true, false)
-	pages.AddPage("register", a.registerForm, true, false)
-	pages.AddPage("login", a.loginForm, true, false)
-	pages.AddPage("remove", a.removeForm, true, false)
-	pages.AddPage("get_data", a.retrieveDataPieceForm, true, false)
-	pages.AddPage("result", resultView, true, false)
+	pages.AddPage(pageMenu, flex, true, true)
+	pages.AddPage(pageStoreLoginPassword, a.storeLoginPasswordForm, true, false)
+	pages.AddPage(pageStoreTextBinary, a.storeTextOrBinaryForm, true, false)
+	pages.AddPage(pageStoreBankCard, a.storeBankCardForm, true, false)
+	pages.AddPage(pageRegister, a.registerForm, true, false)
+	pages.AddPage(pageLogin, a.loginForm, true, false)
+	pages.AddPage(pageRemove, a.removeForm, true, false)
+	pages.AddPage(pageGetData, a.retrieveDataPieceForm, true, false)
+	pages.AddPage(pageResult, resultView, true, false)
 
 	a.logger.Print("Starting the TUI")
 	if err := a.App.SetRoot(pages, true).EnableMouse(true).Run(); err != nil {
 		log.Panic(err)
 	}
 	a.logger.Print("TUI closed, Run() function returned")
+}
+
+// isInt checks that any rune inside a string is a digit
+func isInt(s string) bool {
+	for _, c := range s {
+		if !unicode.IsDigit(c) {
+			return false
+		}
+	}
+	return true
 }
