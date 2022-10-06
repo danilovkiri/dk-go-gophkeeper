@@ -28,8 +28,8 @@ func main() {
 	if err != nil {
 		logger.Fatal(err)
 	}
-	clientGRPC := client.InitGRPCClient(ctx, logger, wg, cfg)
-	storage := inmemory.InitStorage(logger, clientGRPC)
+	clientGRPC := grpcclient.InitGRPCClient(ctx, logger, wg, cfg)
+	storage := inmemory.InitStorage(logger, clientGRPC, cfg)
 	app := tui.InitTUI(cancel, storage, logger, cfg)
 	app.Run()
 	done := make(chan os.Signal, 1)

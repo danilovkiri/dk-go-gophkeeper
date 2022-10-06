@@ -6,6 +6,7 @@ import (
 	"dk-go-gophkeeper/internal/client/grpcclient"
 	"dk-go-gophkeeper/internal/client/storage"
 	"dk-go-gophkeeper/internal/client/storage/modelstorage"
+	"dk-go-gophkeeper/internal/config"
 	"errors"
 	"fmt"
 	"golang.org/x/sync/errgroup"
@@ -24,10 +25,11 @@ type Storage struct {
 	textBinaryDB    map[string]modelstorage.TextOrBinary
 	clientGRPC      grpcclient.GRPCClient
 	logger          *log.Logger
+	cfg             *config.Config
 }
 
 // InitStorage initializes a Storage instance.
-func InitStorage(logger *log.Logger, client grpcclient.GRPCClient) *Storage {
+func InitStorage(logger *log.Logger, client grpcclient.GRPCClient, cfg *config.Config) *Storage {
 	logger.Print("Attempting to initialize storage")
 	bankCardDB := make(map[string]modelstorage.BankCard)
 	loginPasswordDB := make(map[string]modelstorage.LoginAndPassword)
@@ -38,6 +40,7 @@ func InitStorage(logger *log.Logger, client grpcclient.GRPCClient) *Storage {
 		textBinaryDB:    textBinaryDB,
 		logger:          logger,
 		clientGRPC:      client,
+		cfg:             cfg,
 	}
 	return &st
 }
@@ -49,7 +52,7 @@ func (s *Storage) Remove(identifier, db string) error {
 		return fmt.Errorf("identifier cannot be empty in db %s", db)
 	}
 	switch db {
-	case "bankCard":
+	case s.cfg.BankCardDB:
 		_, ok := s.bankCardDB[identifier]
 		if ok {
 			s.logger.Print("Removing entry from bank card storage:", identifier)
@@ -62,7 +65,7 @@ func (s *Storage) Remove(identifier, db string) error {
 		} else {
 			err = fmt.Errorf("entry ID %s in %s storage does not exist", identifier, db)
 		}
-	case "loginPassword":
+	case s.cfg.LoginPasswordDB:
 		_, ok := s.loginPasswordDB[identifier]
 		if ok {
 			s.logger.Print("Removing entry from login/password storage:", identifier)
@@ -75,7 +78,7 @@ func (s *Storage) Remove(identifier, db string) error {
 		} else {
 			err = fmt.Errorf("entry ID %s in %s storage does not exist", identifier, db)
 		}
-	case "textBinary":
+	case s.cfg.TextBinaryDB:
 		_, ok := s.textBinaryDB[identifier]
 		if ok {
 			s.logger.Print("Removing entry from text/binary storage:", identifier)
@@ -172,14 +175,14 @@ func (s *Storage) AddLoginPassword(identifier, login, password, meta string) err
 	_, ok := s.loginPasswordDB[identifier]
 	if ok {
 		s.logger.Print("Unique violation in login/password storage for ID:", identifier)
-		return fmt.Errorf("entry of type 'Login And Passowrd' with ID %s already exists", identifier)
+		return fmt.Errorf("entry of type 'Login And Password' with ID %s already exists", identifier)
 	}
 	s.loginPasswordDB[identifier] = newLoginPasswordEntry
 	s.logger.Print("Added to login/password storage:", newLoginPasswordEntry)
 	_, err := s.clientGRPC.SendLoginPassword(newLoginPasswordEntry)
 	if err != nil {
 		delete(s.loginPasswordDB, identifier)
-		s.logger.Print("Could not upload login.password entry:", err.Error())
+		s.logger.Print("Could not upload login/password entry:", err.Error())
 		return err
 	}
 	return nil
@@ -267,6 +270,9 @@ func (s *Storage) dumpTextsBinaries() error {
 
 // Get retrieves a data piece from local storage.
 func (s *Storage) Get(identifier, db string) (string, error) {
+	if identifier == "" {
+		return "", fmt.Errorf("identifier cannot be empty in db %s", db)
+	}
 	var err error
 	var data string
 	switch db {
