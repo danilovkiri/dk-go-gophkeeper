@@ -44,10 +44,7 @@ func (proc *Processor) GetUserID(accessToken string) (string, error) {
 func (proc *Processor) AddNewUser(ctx context.Context, login, password string) (string, error) {
 	accessToken, userID := proc.cipher.NewToken()
 	err := proc.storage.AddNewUser(ctx, proc.cipher.Encode(login), proc.cipher.Encode(password), userID)
-	if err != nil {
-		return "", err
-	}
-	return accessToken, nil
+	return accessToken, err
 }
 
 // LoginUser performs a login procedure of an existing user.
