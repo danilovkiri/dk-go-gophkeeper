@@ -7,11 +7,13 @@ import (
 	"dk-go-gophkeeper/internal/client/tui/modeltui"
 	"dk-go-gophkeeper/internal/config"
 	"fmt"
-	"github.com/gdamore/tcell/v2"
-	"github.com/rivo/tview"
 	"log"
 	"strings"
 	"unicode"
+
+	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/tview"
+	"github.com/rs/zerolog"
 )
 
 // build parameters to be used with ldflags
@@ -108,7 +110,7 @@ type App struct {
 	loginStatus            *tview.TextView
 	operationStatus        *tview.TextView
 	result                 *tview.TextView
-	logger                 *log.Logger
+	logger                 *zerolog.Logger
 	cfg                    *config.Config
 }
 
@@ -371,7 +373,7 @@ func (a *App) addLoginForm() *tview.Form {
 }
 
 // InitTUI initializes a TUI instance and defines non-static attributes.
-func InitTUI(cancel context.CancelFunc, storage storage.DataStorage, logger *log.Logger, cfg *config.Config) App {
+func InitTUI(cancel context.CancelFunc, storage storage.DataStorage, logger *zerolog.Logger, cfg *config.Config) App {
 	logger.Print("Attempting to initialize TUI")
 	var app = tview.NewApplication()
 	application := App{
@@ -476,11 +478,11 @@ func (a *App) Run() {
 	pages.AddPage(pageGetData, a.retrieveDataPieceForm, true, false)
 	pages.AddPage(pageResult, resultView, true, false)
 
-	a.logger.Print("Starting the TUI")
+	a.logger.Info().Msg("Starting the TUI")
 	if err := a.App.SetRoot(pages, true).EnableMouse(true).Run(); err != nil {
 		log.Panic(err)
 	}
-	a.logger.Print("TUI closed, Run() function returned")
+	a.logger.Info().Msg("TUI closed, Run() function returned")
 }
 
 // isInt checks that any rune inside a string is a digit

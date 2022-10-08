@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	github.com/gdamore/tcell/v2 v2.5.3
+	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.1.2
 	github.com/gostaticanalysis/sqlrows v0.0.0-20200307153552-ea5697937269
 	github.com/ilyakaznacheev/cleanenv v1.3.0
@@ -13,6 +14,7 @@ require (
 	github.com/lib/pq v1.10.2
 	github.com/reillywatson/lintservemux v0.0.0-20191102120836-0e75fcfb6a46
 	github.com/rivo/tview v0.0.0-20220916081518-2e69b7385a37
+	github.com/rs/zerolog v1.15.0
 	github.com/stretchr/testify v1.8.0
 	golang.org/x/sync v0.0.0-20220923202941-7f9b1623fab7
 	golang.org/x/tools v0.1.12
@@ -25,7 +27,6 @@ require (
 	github.com/BurntSushi/toml v1.1.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/gdamore/encoding v1.0.0 // indirect
-	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/gostaticanalysis/analysisutil v0.0.0-20190329151158-56bca42c7635 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect

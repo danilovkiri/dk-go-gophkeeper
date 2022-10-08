@@ -8,8 +8,9 @@ import (
 	"dk-go-gophkeeper/internal/config"
 	procCipher "dk-go-gophkeeper/internal/server/cipher"
 	"encoding/hex"
+
 	"github.com/google/uuid"
-	"log"
+	"github.com/rs/zerolog"
 )
 
 // check for interface compliance.
@@ -22,12 +23,12 @@ type Cipher struct {
 	aesgcm cipher.AEAD
 	nonce  []byte
 	key    []byte
-	logger *log.Logger
+	logger *zerolog.Logger
 }
 
 // NewCipherService initializes a Cipher instance.
-func NewCipherService(cfg *config.Config, logger *log.Logger) (*Cipher, error) {
-	logger.Print("Attempting to initialize cipher")
+func NewCipherService(cfg *config.Config, logger *zerolog.Logger) (*Cipher, error) {
+	logger.Info().Msg("Attempting to initialize cipher")
 	key := sha256.Sum256([]byte(cfg.UserKey))
 	aesblock, err := aes.NewCipher(key[:])
 	if err != nil {

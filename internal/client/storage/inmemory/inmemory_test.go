@@ -5,12 +5,13 @@ import (
 	"dk-go-gophkeeper/internal/config"
 	"dk-go-gophkeeper/internal/mocks"
 	"errors"
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
-	"google.golang.org/grpc/codes"
-	"log"
 	"os"
 	"testing"
+
+	"github.com/golang/mock/gomock"
+	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/assert"
+	"google.golang.org/grpc/codes"
 )
 
 func TestInitStorage(t *testing.T) {
@@ -21,7 +22,8 @@ func TestInitStorage(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mocks.NewMockGRPCClient(ctrl)
-	_ = InitStorage(log.New(os.Stdout, "test ", 0), client, cfg)
+	logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
+	_ = InitStorage(&logger, client, cfg)
 }
 
 func TestStorage_Remove(t *testing.T) {
@@ -36,7 +38,8 @@ func TestStorage_Remove(t *testing.T) {
 	client.EXPECT().SendLoginPassword(gomock.Any()).Return(codes.OK, nil)
 	client.EXPECT().SendTextBinary(gomock.Any()).Return(codes.OK, nil)
 
-	st := InitStorage(log.New(os.Stdout, "test ", 0), client, cfg)
+	logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
+	st := InitStorage(&logger, client, cfg)
 	_ = st.AddBankCard("id1", "", "", "", "")
 	_ = st.AddLoginPassword("id2", "", "", "")
 	_ = st.AddTextBinary("id3", "", "")
@@ -88,7 +91,8 @@ func TestStorage_Login(t *testing.T) {
 	client.EXPECT().SendLoginPassword(gomock.Any()).Return(codes.OK, nil)
 	client.EXPECT().SendTextBinary(gomock.Any()).Return(codes.OK, nil)
 
-	st := InitStorage(log.New(os.Stdout, "test ", 0), client, cfg)
+	logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
+	st := InitStorage(&logger, client, cfg)
 	_ = st.AddBankCard("id1", "", "", "", "")
 	_ = st.AddLoginPassword("id2", "", "", "")
 	_ = st.AddTextBinary("id3", "", "")
@@ -124,7 +128,8 @@ func TestStorage_Register(t *testing.T) {
 	client.EXPECT().SendLoginPassword(gomock.Any()).Return(codes.OK, nil)
 	client.EXPECT().SendTextBinary(gomock.Any()).Return(codes.OK, nil)
 
-	st := InitStorage(log.New(os.Stdout, "test ", 0), client, cfg)
+	logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
+	st := InitStorage(&logger, client, cfg)
 	_ = st.AddBankCard("id1", "", "", "", "")
 	_ = st.AddLoginPassword("id2", "", "", "")
 	_ = st.AddTextBinary("id3", "", "")
@@ -156,7 +161,8 @@ func TestStorage_AddBankCard(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mocks.NewMockGRPCClient(ctrl)
-	st := InitStorage(log.New(os.Stdout, "test ", 0), client, cfg)
+	logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
+	st := InitStorage(&logger, client, cfg)
 
 	err := st.AddBankCard("", "", "", "", "")
 	assert.Equal(t, "identifier cannot be empty", err.Error())
@@ -181,7 +187,8 @@ func TestStorage_AddLoginPassword(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mocks.NewMockGRPCClient(ctrl)
-	st := InitStorage(log.New(os.Stdout, "test ", 0), client, cfg)
+	logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
+	st := InitStorage(&logger, client, cfg)
 
 	err := st.AddLoginPassword("", "", "", "")
 	assert.Equal(t, "identifier cannot be empty", err.Error())
@@ -206,7 +213,8 @@ func TestStorage_AddTextBinary(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mocks.NewMockGRPCClient(ctrl)
-	st := InitStorage(log.New(os.Stdout, "test ", 0), client, cfg)
+	logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
+	st := InitStorage(&logger, client, cfg)
 
 	err := st.AddTextBinary("", "", "")
 	assert.Equal(t, "identifier cannot be empty", err.Error())
@@ -235,7 +243,8 @@ func TestStorage_Get(t *testing.T) {
 	client.EXPECT().SendLoginPassword(gomock.Any()).Return(codes.OK, nil)
 	client.EXPECT().SendTextBinary(gomock.Any()).Return(codes.OK, nil)
 
-	st := InitStorage(log.New(os.Stdout, "test ", 0), client, cfg)
+	logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
+	st := InitStorage(&logger, client, cfg)
 	_ = st.AddBankCard("id1", "", "", "", "")
 	_ = st.AddLoginPassword("id2", "", "", "")
 	_ = st.AddTextBinary("id3", "", "")
@@ -273,7 +282,8 @@ func TestStorage_Sync(t *testing.T) {
 	client.EXPECT().SendLoginPassword(gomock.Any()).Return(codes.OK, nil)
 	client.EXPECT().SendTextBinary(gomock.Any()).Return(codes.OK, nil)
 
-	st := InitStorage(log.New(os.Stdout, "test ", 0), client, cfg)
+	logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
+	st := InitStorage(&logger, client, cfg)
 	_ = st.AddBankCard("id1", "", "", "", "")
 	_ = st.AddLoginPassword("id2", "", "", "")
 	_ = st.AddTextBinary("id3", "", "")

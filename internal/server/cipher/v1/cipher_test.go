@@ -3,17 +3,19 @@ package cipher
 import (
 	"dk-go-gophkeeper/internal/config"
 	"encoding/hex"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/suite"
-	"log"
 	"os"
 	"testing"
+
+	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
 func TestCipher_NewToken(t *testing.T) {
 	cfg := config.NewDefaultConfiguration()
 	cfg.UserKey = "jds__63h3_7ds"
-	cipher, _ := NewCipherService(cfg, log.New(os.Stdout, "test", 0))
+	logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
+	cipher, _ := NewCipherService(cfg, &logger)
 	token, userID := cipher.NewToken()
 	assert.Equal(t, cipher.Encode(userID), token)
 }
@@ -21,7 +23,8 @@ func TestCipher_NewToken(t *testing.T) {
 func TestCipher_ValidateToken(t *testing.T) {
 	cfg := config.NewDefaultConfiguration()
 	cfg.UserKey = "jds__63h3_7ds"
-	cipher, _ := NewCipherService(cfg, log.New(os.Stdout, "test", 0))
+	logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
+	cipher, _ := NewCipherService(cfg, &logger)
 	token, expUserID := cipher.NewToken()
 	obsUserID, _ := cipher.ValidateToken(token)
 	assert.Equal(t, expUserID, obsUserID)
@@ -30,7 +33,8 @@ func TestCipher_ValidateToken(t *testing.T) {
 func TestCipher_ValidateTokenFail(t *testing.T) {
 	cfg := config.NewDefaultConfiguration()
 	cfg.UserKey = "jds__63h3_7ds"
-	cipher, _ := NewCipherService(cfg, log.New(os.Stdout, "test", 0))
+	logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
+	cipher, _ := NewCipherService(cfg, &logger)
 	_, err := cipher.ValidateToken("non-hex-encoded-data")
 	assert.Equal(t, err.Error(), "encoding/hex: invalid byte: U+006E 'n'")
 }
@@ -38,7 +42,8 @@ func TestCipher_ValidateTokenFail(t *testing.T) {
 func TestDecode_Fail(t *testing.T) {
 	cfg := config.NewDefaultConfiguration()
 	cfg.UserKey = "jds__63h3_7ds"
-	cipher, _ := NewCipherService(cfg, log.New(os.Stdout, "test", 0))
+	logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
+	cipher, _ := NewCipherService(cfg, &logger)
 	var newNonce []byte
 	for i := 0; i < len(cipher.nonce); i++ {
 		newNonce = append(newNonce, 1)
@@ -60,7 +65,8 @@ type CipherTestSuite struct {
 func (suite *CipherTestSuite) SetupTest() {
 	suite.config = config.NewDefaultConfiguration()
 	suite.config.UserKey = "jds__63h3_7ds"
-	suite.cipher, _ = NewCipherService(suite.config, log.New(os.Stdout, "test", 0))
+	logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
+	suite.cipher, _ = NewCipherService(suite.config, &logger)
 }
 
 func TestSecretaryTestSuite(t *testing.T) {

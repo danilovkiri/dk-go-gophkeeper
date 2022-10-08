@@ -11,13 +11,14 @@ import (
 	storageErrors "dk-go-gophkeeper/internal/server/storage/errors"
 	"dk-go-gophkeeper/internal/server/storage/modelstorage"
 	"errors"
+	"sync"
+	"time"
+
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/lib/pq"
-	"log"
-	"sync"
-	"time"
+	"github.com/rs/zerolog"
 )
 
 // check for interface compliance
@@ -30,16 +31,16 @@ type Storage struct {
 	mu     sync.Mutex
 	cfg    *config.Config
 	DB     *sql.DB
-	logger *log.Logger
+	logger *zerolog.Logger
 	ch     chan modelstorage.Removal
 }
 
 // InitStorage initalizes a Storage instance, sets a listener for its closure and asynchronous data removal.
-func InitStorage(ctx context.Context, logger *log.Logger, cfg *config.Config, wg *sync.WaitGroup) *Storage {
-	logger.Print("Attempting to initialize storage")
+func InitStorage(ctx context.Context, logger *zerolog.Logger, cfg *config.Config, wg *sync.WaitGroup) *Storage {
+	logger.Info().Msg("Attempting to initialize storage")
 	db, err := sql.Open("pgx", cfg.DatabaseDSN)
 	if err != nil {
-		logger.Fatal(err)
+		logger.Fatal().Err(err).Msg("Could not open sql DB")
 	}
 	recordCh := make(chan modelstorage.Removal)
 	st := Storage{
@@ -50,9 +51,9 @@ func InitStorage(ctx context.Context, logger *log.Logger, cfg *config.Config, wg
 	}
 	err = st.createTables(ctx)
 	if err != nil {
-		logger.Fatal(err)
+		logger.Fatal().Err(err).Msg("Could not create tables")
 	}
-	logger.Print("PSQL DB connection was established")
+	logger.Info().Msg("PSQL DB connection was established")
 
 	const flushPartsAmount = 10
 	const flushPartsInterval = time.Second * 10
@@ -66,25 +67,25 @@ func InitStorage(ctx context.Context, logger *log.Logger, cfg *config.Config, wg
 			select {
 			case <-ctx.Done():
 				if len(parts) > 0 {
-					logger.Print("Deleting data due to context cancellation", parts)
+					logger.Info().Msgf("Deleting data due to context cancellation: %v", parts)
 					err := st.Flush(ctx, parts)
 					if err != nil {
-						logger.Fatal(err)
+						logger.Fatal().Err(err).Msg("Could not flush")
 					}
 				}
 				close(st.ch)
 				err := st.DB.Close()
 				if err != nil {
-					logger.Fatal(err)
+					logger.Fatal().Err(err).Msg("Could not close sql DB")
 				}
-				logger.Print("PSQL DB connection closed successfully")
+				logger.Info().Msg("PSQL DB connection closed successfully")
 				return
 			case <-t.C:
 				if len(parts) > 0 {
-					logger.Print("Deleting data due to timeout", parts)
+					logger.Info().Msgf("Deleting data due to timeout: %v", parts)
 					err := st.Flush(ctx, parts)
 					if err != nil {
-						logger.Fatal(err)
+						logger.Fatal().Err(err).Msg("Could not flush")
 					}
 					parts = make([]modelstorage.Removal, 0, flushPartsAmount)
 				}
@@ -94,10 +95,10 @@ func InitStorage(ctx context.Context, logger *log.Logger, cfg *config.Config, wg
 				}
 				parts = append(parts, part)
 				if len(parts) >= flushPartsAmount {
-					logger.Print("Deleting data due to exceeding capacity", parts)
+					logger.Info().Msgf("Deleting data due to exceeding capacity: %v", parts)
 					err := st.Flush(ctx, parts)
 					if err != nil {
-						logger.Fatal(err)
+						logger.Fatal().Err(err).Msg("Could not flush")
 					}
 					parts = make([]modelstorage.Removal, 0, flushPartsAmount)
 				}
@@ -148,13 +149,13 @@ func (s *Storage) GetBankCardData(ctx context.Context, userID string) ([]modelst
 	}()
 	select {
 	case <-ctx.Done():
-		s.logger.Print("getting bank card failed due to context timeout")
+		s.logger.Error().Msg("getting bank card failed due to context timeout")
 		return nil, &storageErrors.ContextTimeoutExceededError{Err: ctx.Err()}
 	case methodErr := <-chanEr:
-		s.logger.Print("getting bank card failed due to storage error")
+		s.logger.Error().Err(methodErr).Msg("getting bank card failed due to storage error")
 		return nil, methodErr
 	case query := <-chanOk:
-		s.logger.Print("getting bank card done")
+		s.logger.Info().Msg("getting bank card done")
 		return query, nil
 	}
 }
@@ -200,13 +201,13 @@ func (s *Storage) GetLoginPasswordData(ctx context.Context, userID string) ([]mo
 	}()
 	select {
 	case <-ctx.Done():
-		s.logger.Print("getting login/password failed due to context timeout")
+		s.logger.Error().Msg("getting login/password failed due to context timeout")
 		return nil, &storageErrors.ContextTimeoutExceededError{Err: ctx.Err()}
 	case methodErr := <-chanEr:
-		s.logger.Print("getting login/password failed due to storage error")
+		s.logger.Error().Err(methodErr).Msg("getting login/password failed due to storage error")
 		return nil, methodErr
 	case query := <-chanOk:
-		s.logger.Print("getting login/password done")
+		s.logger.Info().Msg("getting login/password done")
 		return query, nil
 	}
 }
@@ -252,13 +253,13 @@ func (s *Storage) GetTextBinaryData(ctx context.Context, userID string) ([]model
 	}()
 	select {
 	case <-ctx.Done():
-		s.logger.Print("getting text/binary failed due to context timeout")
+		s.logger.Error().Msg("getting text/binary failed due to context timeout")
 		return nil, &storageErrors.ContextTimeoutExceededError{Err: ctx.Err()}
 	case methodErr := <-chanEr:
-		s.logger.Print("getting text/binary failed due to storage error")
+		s.logger.Error().Err(methodErr).Msg("getting text/binary failed due to storage error")
 		return nil, methodErr
 	case query := <-chanOk:
-		s.logger.Print("getting text/binary done")
+		s.logger.Info().Msg("getting text/binary done")
 		return query, nil
 	}
 }
@@ -298,13 +299,13 @@ func (s *Storage) SetBankCardData(ctx context.Context, userID, identifier, numbe
 	}()
 	select {
 	case <-ctx.Done():
-		s.logger.Printf("adding new bank card failed for ID %s due to context timeout", identifier)
+		s.logger.Error().Msgf("adding new bank card failed for ID %s due to context timeout", identifier)
 		return &storageErrors.ContextTimeoutExceededError{Err: ctx.Err()}
 	case methodErr := <-chanEr:
-		s.logger.Printf("adding new bank card failed for ID %s due to storage error", identifier)
+		s.logger.Error().Err(methodErr).Msgf("adding new bank card failed for ID %s due to storage error", identifier)
 		return methodErr
 	case <-chanOk:
-		s.logger.Printf("adding new bank card done for ID %s", identifier)
+		s.logger.Info().Msgf("adding new bank card done for ID %s", identifier)
 		return nil
 	}
 }
@@ -344,13 +345,13 @@ func (s *Storage) SetLoginPasswordData(ctx context.Context, userID, identifier, 
 	}()
 	select {
 	case <-ctx.Done():
-		s.logger.Printf("adding new login/password failed for ID %s due to context timeout", identifier)
+		s.logger.Error().Msgf("adding new login/password failed for ID %s due to context timeout", identifier)
 		return &storageErrors.ContextTimeoutExceededError{Err: ctx.Err()}
 	case methodErr := <-chanEr:
-		s.logger.Printf("adding new login/password failed for ID %s due to storage error", identifier)
+		s.logger.Error().Err(methodErr).Msgf("adding new login/password failed for ID %s due to storage error", identifier)
 		return methodErr
 	case <-chanOk:
-		s.logger.Printf("adding new login/password done for ID %s", identifier)
+		s.logger.Info().Msgf("adding new login/password done for ID %s", identifier)
 		return nil
 	}
 }
@@ -390,13 +391,13 @@ func (s *Storage) SetTextBinaryData(ctx context.Context, userID, identifier, ent
 	}()
 	select {
 	case <-ctx.Done():
-		s.logger.Printf("adding new text/binary failed for ID %s due to context timeout", identifier)
+		s.logger.Error().Msgf("adding new text/binary failed for ID %s due to context timeout", identifier)
 		return &storageErrors.ContextTimeoutExceededError{Err: ctx.Err()}
 	case methodErr := <-chanEr:
-		s.logger.Printf("adding new text/binary failed for ID %s due to storage error", identifier)
+		s.logger.Error().Err(methodErr).Msgf("adding new text/binary failed for ID %s due to storage error", identifier)
 		return methodErr
 	case <-chanOk:
-		s.logger.Printf("adding new text/binary done for ID %s", identifier)
+		s.logger.Info().Msgf("adding new text/binary done for ID %s", identifier)
 		return nil
 	}
 }
@@ -427,13 +428,13 @@ func (s *Storage) AddNewUser(ctx context.Context, login, password, userID string
 	}()
 	select {
 	case <-ctx.Done():
-		s.logger.Printf("Adding new user failed for %s due to context timeout", login)
+		s.logger.Error().Msgf("Adding new user failed for %s due to context timeout", login)
 		return &storageErrors.ContextTimeoutExceededError{Err: ctx.Err()}
 	case methodErr := <-chanEr:
-		s.logger.Printf("Adding new user failed for %s due to storage error", login)
+		s.logger.Error().Err(methodErr).Msgf("Adding new user failed for %s due to storage error", login)
 		return methodErr
 	case <-chanOk:
-		s.logger.Printf("Adding new user done for %s", login)
+		s.logger.Info().Msgf("Adding new user done for %s", login)
 		return nil
 	}
 }
@@ -459,7 +460,7 @@ func (s *Storage) CheckUser(ctx context.Context, login, password string) (string
 		err := selectStmt.QueryRowContext(ctx, login).Scan(&queryOutput.ID, &queryOutput.UserID, &queryOutput.Login, &queryOutput.Password, &queryOutput.RegisteredAt)
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
-			s.logger.Print("Absent login detected")
+			s.logger.Warn().Msg("Absent login detected")
 			chanEr <- &storageErrors.NotFoundError{Err: err}
 		case err != nil:
 			chanEr <- err
@@ -468,7 +469,7 @@ func (s *Storage) CheckUser(ctx context.Context, login, password string) (string
 			expectedPasswordHash := sha256.Sum256([]byte(queryOutput.Password))
 			passwordMatch := subtle.ConstantTimeCompare(passwordHash[:], expectedPasswordHash[:]) == 1
 			if !passwordMatch {
-				s.logger.Print("Unsuccessful authentication detected")
+				s.logger.Warn().Msg("Unsuccessful authentication detected")
 				chanEr <- &storageErrors.InvalidPasswordError{Err: nil}
 				return
 			}
@@ -477,13 +478,13 @@ func (s *Storage) CheckUser(ctx context.Context, login, password string) (string
 	}()
 	select {
 	case <-ctx.Done():
-		s.logger.Print("User authentication failed due to context timeout")
+		s.logger.Error().Msg("User authentication failed due to context timeout")
 		return "", &storageErrors.ContextTimeoutExceededError{Err: ctx.Err()}
 	case methodErr := <-chanEr:
-		s.logger.Print("User authentication failed due to storage error")
+		s.logger.Error().Err(methodErr).Msg("User authentication failed due to storage error")
 		return "", methodErr
 	case userID := <-chanOk:
-		s.logger.Print("User authentication done")
+		s.logger.Info().Msg("User authentication done")
 		return userID, nil
 	}
 }
@@ -526,9 +527,8 @@ func (s *Storage) DeleteBatch(ctx context.Context, identifiers []string, userID,
 		}
 	}(tx)
 	txDeleteStmt := tx.StmtContext(ctx, deleteStmt)
-	// create channels for listening to the go routine result
-	deleteDone := make(chan bool)
-	deleteError := make(chan error)
+	chanOk := make(chan bool)
+	chanEr := make(chan error)
 	go func() {
 		_, err = txDeleteStmt.ExecContext(
 			ctx,
@@ -536,19 +536,19 @@ func (s *Storage) DeleteBatch(ctx context.Context, identifiers []string, userID,
 			pq.Array(identifiers),
 		)
 		if err != nil {
-			deleteError <- &storageErrors.ExecutionPSQLError{Err: err}
+			chanEr <- &storageErrors.ExecutionPSQLError{Err: err}
 		}
-		deleteDone <- true
+		chanOk <- true
 	}()
 	select {
 	case <-ctx.Done():
-		log.Println("Deleting data:", ctx.Err())
+		s.logger.Error().Msg("Deleting data failed due to context timeout")
 		return &storageErrors.ContextTimeoutExceededError{Err: ctx.Err()}
-	case dltError := <-deleteError:
-		log.Println("Deleting data:", dltError.Error())
-		return dltError
-	case <-deleteDone:
-		log.Println("Deleting data:", identifiers)
+	case methodErr := <-chanEr:
+		s.logger.Error().Err(methodErr).Msg("Deleting data failed due to method error")
+		return methodErr
+	case <-chanOk:
+		s.logger.Info().Msg("Deleting data done")
 		return tx.Commit()
 	}
 }
@@ -601,7 +601,7 @@ func (s *Storage) Flush(ctx context.Context, batch []modelstorage.Removal) error
 	return nil
 }
 
-// createTables created necessary tables if the PSQL DB if the do not exist.
+// createTables created necessary tables if the PSQL DB if they do not exist.
 func (s *Storage) createTables(ctx context.Context) error {
 	var queries []string
 	query := `CREATE TABLE IF NOT EXISTS users (

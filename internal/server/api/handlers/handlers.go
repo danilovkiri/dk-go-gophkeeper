@@ -5,17 +5,18 @@ import (
 	"context"
 	"dk-go-gophkeeper/internal/config"
 	pb "dk-go-gophkeeper/internal/grpc/proto"
-	"dk-go-gophkeeper/internal/server/cipher/v1"
+	cipher "dk-go-gophkeeper/internal/server/cipher/v1"
 	"dk-go-gophkeeper/internal/server/processor"
 	service "dk-go-gophkeeper/internal/server/processor/v1"
 	"dk-go-gophkeeper/internal/server/storage"
+	"time"
+
+	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"log"
-	"time"
 )
 
 // GophkeeperServer defines attributes and methods of a GophkeeperServer instance.
@@ -23,12 +24,12 @@ type GophkeeperServer struct {
 	pb.UnimplementedGophkeeperServer
 	processor processor.Processor
 	cfg       *config.Config
-	logger    *log.Logger
+	logger    *zerolog.Logger
 }
 
 // InitServer initializes a GophkeeperServer instance.
-func InitServer(cfg *config.Config, storage storage.DataStorage, logger *log.Logger) (server *GophkeeperServer, err error) {
-	logger.Print("Attempting to initialize server")
+func InitServer(cfg *config.Config, storage storage.DataStorage, logger *zerolog.Logger) (server *GophkeeperServer, err error) {
+	logger.Info().Msg("Attempting to initialize server")
 	cipherInstance, err := cipher.NewCipherService(cfg, logger)
 	if err != nil {
 		return nil, err
@@ -39,28 +40,28 @@ func InitServer(cfg *config.Config, storage storage.DataStorage, logger *log.Log
 
 // Register implements server-side register functionality.
 func (s *GophkeeperServer) Register(ctx context.Context, request *pb.LoginRegisterRequest) (*emptypb.Empty, error) {
-	s.logger.Print("New register request received")
+	s.logger.Info().Msg("New register request received")
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.HandlersTO)*time.Millisecond)
 	defer cancel()
 	accessToken, err := s.processor.AddNewUser(ctx, request.Login, request.Password)
 	if err != nil {
-		s.logger.Print("New register request failed")
+		s.logger.Error().Err(err).Msg("New register request failed")
 		return nil, status.Error(codes.Unauthenticated, err.Error())
 	}
 	md := metadata.New(map[string]string{"token": accessToken})
 	err = grpc.SendHeader(ctx, md)
 	if err != nil {
-		s.logger.Print("New register request failed when sending headers")
+		s.logger.Error().Err(err).Msg("New register request failed when sending headers")
 		return nil, status.Error(codes.Unauthenticated, err.Error())
 	}
-	s.logger.Print("New register request succeeded")
+	s.logger.Info().Msg("New register request succeeded")
 	var response emptypb.Empty
 	return &response, nil
 }
 
 // Login implements server-side login functionality.
 func (s *GophkeeperServer) Login(ctx context.Context, request *pb.LoginRegisterRequest) (*emptypb.Empty, error) {
-	s.logger.Print("New login request received")
+	s.logger.Info().Msg("New login request received")
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.HandlersTO)*time.Millisecond)
 	defer cancel()
 	accessToken, err := s.processor.LoginUser(ctx, request.Login, request.Password)
@@ -70,17 +71,17 @@ func (s *GophkeeperServer) Login(ctx context.Context, request *pb.LoginRegisterR
 	md := metadata.New(map[string]string{"token": accessToken})
 	err = grpc.SendHeader(ctx, md)
 	if err != nil {
-		s.logger.Print("New login request failed when sending headers")
+		s.logger.Error().Err(err).Msg("New login request failed when sending headers")
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	s.logger.Print("New login request succeeded")
+	s.logger.Info().Msg("New login request succeeded")
 	var response emptypb.Empty
 	return &response, nil
 }
 
 // DeleteBankCard performs bank card entry removal from server DB.
 func (s *GophkeeperServer) DeleteBankCard(ctx context.Context, request *pb.DeleteBankCardRequest) (*emptypb.Empty, error) {
-	s.logger.Print("New DELETE bank card request received")
+	s.logger.Info().Msg("New DELETE bank card request received")
 	userID := s.getUserID(ctx)
 	s.processor.Delete(userID, request.Identifier, s.cfg.BankCardDB)
 	var response emptypb.Empty
@@ -89,7 +90,7 @@ func (s *GophkeeperServer) DeleteBankCard(ctx context.Context, request *pb.Delet
 
 // DeleteLoginPassword performs login/password entry removal from server DB.
 func (s *GophkeeperServer) DeleteLoginPassword(ctx context.Context, request *pb.DeleteLoginPasswordRequest) (*emptypb.Empty, error) {
-	s.logger.Print("New DELETE login/password request received")
+	s.logger.Info().Msg("New DELETE login/password request received")
 	userID := s.getUserID(ctx)
 	s.processor.Delete(userID, request.Identifier, s.cfg.LoginPasswordDB)
 	var response emptypb.Empty
@@ -98,7 +99,7 @@ func (s *GophkeeperServer) DeleteLoginPassword(ctx context.Context, request *pb.
 
 // DeleteTextBinary performs text/binary entry removal from server DB.
 func (s *GophkeeperServer) DeleteTextBinary(ctx context.Context, request *pb.DeleteTextBinaryRequest) (*emptypb.Empty, error) {
-	s.logger.Print("New DELETE text/binary request received")
+	s.logger.Info().Msg("New DELETE text/binary request received")
 	userID := s.getUserID(ctx)
 	s.processor.Delete(userID, request.Identifier, s.cfg.TextBinaryDB)
 	var response emptypb.Empty
@@ -107,7 +108,7 @@ func (s *GophkeeperServer) DeleteTextBinary(ctx context.Context, request *pb.Del
 
 // PostBankCard performs bank card entry addition to server DB.
 func (s *GophkeeperServer) PostBankCard(ctx context.Context, request *pb.SendBankCardRequest) (*emptypb.Empty, error) {
-	s.logger.Print("New POST bank card request received")
+	s.logger.Info().Msg("New POST bank card request received")
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.HandlersTO)*time.Millisecond)
 	defer cancel()
 	userID := s.getUserID(ctx)
@@ -121,7 +122,7 @@ func (s *GophkeeperServer) PostBankCard(ctx context.Context, request *pb.SendBan
 
 // PostLoginPassword performs login/password entry addition to server DB.
 func (s *GophkeeperServer) PostLoginPassword(ctx context.Context, request *pb.SendLoginPasswordRequest) (*emptypb.Empty, error) {
-	s.logger.Print("New POST login/password request received")
+	s.logger.Info().Msg("New POST login/password request received")
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.HandlersTO)*time.Millisecond)
 	defer cancel()
 	userID := s.getUserID(ctx)
@@ -135,7 +136,7 @@ func (s *GophkeeperServer) PostLoginPassword(ctx context.Context, request *pb.Se
 
 // PostTextBinary performs text/binary entry addition to server DB.
 func (s *GophkeeperServer) PostTextBinary(ctx context.Context, request *pb.SendTextBinaryRequest) (*emptypb.Empty, error) {
-	s.logger.Print("New POST text/binary request received")
+	s.logger.Info().Msg("New POST text/binary request received")
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.HandlersTO)*time.Millisecond)
 	defer cancel()
 	userID := s.getUserID(ctx)
@@ -149,7 +150,7 @@ func (s *GophkeeperServer) PostTextBinary(ctx context.Context, request *pb.SendT
 
 // GetBankCards performs bank card entries retrieval from server DB.
 func (s *GophkeeperServer) GetBankCards(ctx context.Context, _ *emptypb.Empty) (*pb.GetBankCardsResponse, error) {
-	s.logger.Print("New GET bank cards request received")
+	s.logger.Info().Msg("New GET bank cards request received")
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.HandlersTO)*time.Millisecond)
 	defer cancel()
 	userID := s.getUserID(ctx)
@@ -173,7 +174,7 @@ func (s *GophkeeperServer) GetBankCards(ctx context.Context, _ *emptypb.Empty) (
 
 // GetLoginsPasswords performs login/password entries retrieval from server DB.
 func (s *GophkeeperServer) GetLoginsPasswords(ctx context.Context, _ *emptypb.Empty) (*pb.GetLoginsPasswordsResponse, error) {
-	s.logger.Print("New GET logins/passwords request received")
+	s.logger.Info().Msg("New GET logins/passwords request received")
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.HandlersTO)*time.Millisecond)
 	defer cancel()
 	userID := s.getUserID(ctx)
@@ -196,7 +197,7 @@ func (s *GophkeeperServer) GetLoginsPasswords(ctx context.Context, _ *emptypb.Em
 
 // GetTextsBinaries performs text/binary entries retrieval from server DB.
 func (s *GophkeeperServer) GetTextsBinaries(ctx context.Context, _ *emptypb.Empty) (*pb.GetTextsBinariesResponse, error) {
-	s.logger.Print("New GET texts/binaries request received")
+	s.logger.Info().Msg("New GET texts/binaries request received")
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.HandlersTO)*time.Millisecond)
 	defer cancel()
 	userID := s.getUserID(ctx)
