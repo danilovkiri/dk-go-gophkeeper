@@ -49,7 +49,7 @@ Run the TUI application (or compiled binary):
 go run ./cmd/client/main.go
 ```
 
-The resizable window will appear inside the console:
+A resizable window will appear inside the console:
 
 <img src="./resources/mainView.png" alt="drawing" width="700"/>
 

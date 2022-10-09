@@ -52,7 +52,7 @@ func (s *GophkeeperServer) Register(ctx context.Context, request *pb.LoginRegist
 	err = grpc.SendHeader(ctx, md)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("New register request failed when sending headers")
-		return nil, status.Error(codes.Unauthenticated, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 	s.logger.Info().Msg("New register request succeeded")
 	var response emptypb.Empty
