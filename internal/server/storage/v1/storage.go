@@ -521,8 +521,8 @@ func (s *Storage) DeleteBatch(ctx context.Context, identifiers []string, userID,
 		return &storageErrors.ExecutionPSQLError{Err: err}
 	}
 	defer func(tx *sql.Tx) {
-		err := tx.Rollback()
-		if err != nil {
+		err1 := tx.Rollback()
+		if err1 != nil {
 			return
 		}
 	}(tx)

@@ -117,9 +117,9 @@ func TestAuthHandler_UnaryServerInterceptor_FailDataAccess(t *testing.T) {
 	}
 	pb.RegisterGophkeeperServer(s, server)
 	go func(t *testing.T) {
-		err := s.Serve(listen)
-		if err != nil {
-			t.Error(err)
+		err1 := s.Serve(listen)
+		if err1 != nil {
+			t.Error(err1)
 		}
 	}(t)
 
@@ -162,9 +162,9 @@ func TestAuthHandler_UnaryServerInterceptor_Login(t *testing.T) {
 	}
 	pb.RegisterGophkeeperServer(s, server)
 	go func(t *testing.T) {
-		err := s.Serve(listen)
-		if err != nil {
-			t.Error(err)
+		err1 := s.Serve(listen)
+		if err1 != nil {
+			t.Error(err1)
 		}
 	}(t)
 
@@ -207,9 +207,9 @@ func TestAuthHandler_UnaryServerInterceptor_Register(t *testing.T) {
 	}
 	pb.RegisterGophkeeperServer(s, server)
 	go func(t *testing.T) {
-		err := s.Serve(listen)
-		if err != nil {
-			t.Error(err)
+		err1 := s.Serve(listen)
+		if err1 != nil {
+			t.Error(err1)
 		}
 	}(t)
 

@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"dk-go-gophkeeper/internal/client/grpcclient/client"
 	"dk-go-gophkeeper/internal/config"
 	pb "dk-go-gophkeeper/internal/grpc/proto"
 	"dk-go-gophkeeper/internal/mocks"
@@ -36,7 +35,6 @@ type HandlersTestSuite struct {
 	s       *grpc.Server
 	cfg     *config.Config
 	cipher  *cipher.Cipher
-	client  *grpcclient.GRPCClient
 	token   string
 	md      metadata.MD
 }
