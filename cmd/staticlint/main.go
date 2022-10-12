@@ -1,6 +1,8 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/gostaticanalysis/sqlrows/passes/sqlrows"
 	"github.com/reillywatson/lintservemux"
 	"golang.org/x/tools/go/analysis"
@@ -24,7 +26,6 @@ import (
 	"golang.org/x/tools/go/analysis/passes/unusedresult"
 	"golang.org/x/tools/go/analysis/passes/unusedwrite"
 	"honnef.co/go/tools/staticcheck"
-	"strings"
 )
 
 func main() {

@@ -39,7 +39,7 @@ configuration file is shown below:
 ```
 
 Note that command-line arguments are prioritized over environment and JSON config-derived arguments. Environment
-variables have, in turn, higher priority that JSON config-derived ones.
+variables have, in turn, higher priority than JSON config-derived ones.
 
 ### Client
 
@@ -49,7 +49,7 @@ Run the TUI application (or compiled binary):
 go run ./cmd/client/main.go
 ```
 
-The resizable window will appear inside the console:
+A resizable window will appear inside the console:
 
 <img src="./resources/mainView.png" alt="drawing" width="700"/>
 

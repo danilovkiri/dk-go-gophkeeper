@@ -4,19 +4,23 @@ import (
 	"context"
 	"dk-go-gophkeeper/internal/config"
 	pb "dk-go-gophkeeper/internal/grpc/proto"
+	"dk-go-gophkeeper/internal/logger"
 	"dk-go-gophkeeper/internal/server/api/handlers"
 	"dk-go-gophkeeper/internal/server/api/interceptors"
-	"dk-go-gophkeeper/internal/server/cipher/v1"
-	"dk-go-gophkeeper/internal/server/storage/v1"
+	cipher "dk-go-gophkeeper/internal/server/cipher/v1"
+	storage "dk-go-gophkeeper/internal/server/storage/v1"
 	"fmt"
-	"google.golang.org/grpc"
 	"log"
 	"net"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
+
+	"google.golang.org/grpc"
 )
+
+// build parameters to be used with ldflags
 
 var (
 	buildVersion string
@@ -53,27 +57,27 @@ func main() {
 		log.Fatal(err)
 	}
 	defer flog.Close()
-	logger := log.New(flog, `server `, log.LstdFlags|log.Lshortfile)
+	loggerInstance := logger.InitLog(flog)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	cfg := config.NewDefaultConfiguration()
 	err = cfg.Parse()
 	if err != nil {
-		logger.Fatal(err)
+		loggerInstance.Fatal().Err(err).Msg("Config initialization failed")
 	}
 	wg := &sync.WaitGroup{}
-	storageInstance := storage.InitStorage(ctx, logger, cfg, wg)
-	server, err := handlers.InitServer(cfg, storageInstance, logger)
+	storageInstance := storage.InitStorage(ctx, loggerInstance, cfg, wg)
+	server, err := handlers.InitServer(cfg, storageInstance, loggerInstance)
 	if err != nil {
-		logger.Fatal(err)
+		loggerInstance.Fatal().Err(err).Msg("Handlers initialization failed")
 	}
 	listen, err := net.Listen("tcp", cfg.ServerAddress)
 	if err != nil {
-		logger.Fatal(err)
+		loggerInstance.Fatal().Err(err).Msg("Server listening failed")
 	}
-	cipherInstance, err := cipher.NewCipherService(cfg, logger)
+	cipherInstance, err := cipher.NewCipherService(cfg, loggerInstance)
 	if err != nil {
-		logger.Fatal(err)
+		loggerInstance.Fatal().Err(err).Msg("Cipher initialization failed")
 	}
 	interceptorService := interceptors.NewAuthHandler(cipherInstance, cfg)
 	s := grpc.NewServer(grpc.UnaryInterceptor(interceptorService.UnaryServerInterceptor()))
@@ -81,15 +85,15 @@ func main() {
 	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	go func() {
 		<-done
-		logger.Print("Server shutdown attempted")
+		loggerInstance.Warn().Msg("Server shutdown attempted")
 		s.GracefulStop()
 		cancel()
 	}()
 	pb.RegisterGophkeeperServer(s, server)
-	logger.Print("Server start attempted")
+	loggerInstance.Info().Msg("Server start attempted")
 	if err := s.Serve(listen); err != nil {
-		logger.Fatal(err)
+		loggerInstance.Fatal().Err(err).Msg("Server start failed")
 	}
 	wg.Wait()
-	logger.Print("Server shutdown succeeded")
+	loggerInstance.Info().Msg("Server shutdown succeeded")
 }

@@ -2,10 +2,11 @@ package main
 
 import (
 	"context"
-	"dk-go-gophkeeper/internal/client/grpcclient/client"
+	grpcclient "dk-go-gophkeeper/internal/client/grpcclient/client"
 	"dk-go-gophkeeper/internal/client/storage/inmemory"
 	"dk-go-gophkeeper/internal/client/tui"
 	"dk-go-gophkeeper/internal/config"
+	"dk-go-gophkeeper/internal/logger"
 	"log"
 	"os"
 	"os/signal"
@@ -20,23 +21,23 @@ func main() {
 		log.Fatal(err)
 	}
 	defer flog.Close()
-	logger := log.New(flog, `client `, log.LstdFlags|log.Lshortfile)
+	loggerInstance := logger.InitLog(flog)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	cfg := config.NewDefaultConfiguration()
 	err = cfg.Parse()
 	if err != nil {
-		logger.Fatal(err)
+		loggerInstance.Fatal().Err(err)
 	}
-	clientGRPC := client.InitGRPCClient(ctx, logger, wg, cfg)
-	storage := inmemory.InitStorage(logger, clientGRPC)
-	app := tui.InitTUI(cancel, storage, logger, cfg)
+	clientGRPC := grpcclient.InitGRPCClient(ctx, loggerInstance, wg, cfg)
+	storage := inmemory.InitStorage(loggerInstance, clientGRPC, cfg)
+	app := tui.InitTUI(cancel, storage, loggerInstance, cfg)
 	app.Run()
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-done
-		logger.Print("Shutting down by external signal initiated")
+		loggerInstance.Warn().Msg("Shutting down by external signal initiated")
 		app.App.Stop()
 		cancel()
 	}()

@@ -8,7 +8,8 @@ import (
 	"dk-go-gophkeeper/internal/server/processor"
 	"dk-go-gophkeeper/internal/server/storage"
 	"dk-go-gophkeeper/internal/server/storage/modelstorage"
-	"log"
+
+	"github.com/rs/zerolog"
 )
 
 // check for interface compliance
@@ -20,12 +21,12 @@ var (
 type Processor struct {
 	storage storage.DataStorage
 	cipher  cipher.Cipher
-	logger  *log.Logger
+	logger  *zerolog.Logger
 }
 
 // InitService initializes a Processor instance.
-func InitService(st storage.DataStorage, cp cipher.Cipher, logger *log.Logger) *Processor {
-	logger.Print("Attempting to initialize processor")
+func InitService(st storage.DataStorage, cp cipher.Cipher, logger *zerolog.Logger) *Processor {
+	logger.Info().Msg("Attempting to initialize processor")
 	serviceProcessor := &Processor{
 		storage: st,
 		cipher:  cp,
@@ -44,10 +45,7 @@ func (proc *Processor) GetUserID(accessToken string) (string, error) {
 func (proc *Processor) AddNewUser(ctx context.Context, login, password string) (string, error) {
 	accessToken, userID := proc.cipher.NewToken()
 	err := proc.storage.AddNewUser(ctx, proc.cipher.Encode(login), proc.cipher.Encode(password), userID)
-	if err != nil {
-		return "", err
-	}
-	return accessToken, nil
+	return accessToken, err
 }
 
 // LoginUser performs a login procedure of an existing user.
